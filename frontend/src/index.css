@@ -1,0 +1,37 @@
+@font-face {
+  font-family: Dash Horizon;
+  src: url(../src/assets/fonts/dash-horizon.regular.otf);
+}
+
+@font-face {
+  font-family: Roboto;
+  src: url(../src/assets/fonts/Roboto-Regular.ttf);
+}
+
+@import "tailwindcss";
+:root {
+  background-color: #22409A;
+}
+
+@theme{
+  --color-primary: #FFD93D;
+  --color-secondary: #FF0000;
+  --color-gradient1: #C62015;
+  --color-gradient2: #DB8234;
+  --color-gradient-red-1: #FF0000;
+  --color-gradient-red-2: #CA0000;
+  --color-L: #E50000;
+  --color-f-d: #23429D;
+  --color-e-u: #02A04B;
+  --color-plus: #02A04B;
+  --color-download: #DB0000;
+  --color-coin: #EA8080;
+  --color-battle: #53C588;
+  --color-refer: #899B9F;
+  --color-black-ka-bhai: #212121;
+  --color-logout: #1B1B1B;
+  --color-chips: #4169DE;
+  --color-menu-base: #4C5456;
+  --font-dashhorizon: Dash Horizon, "sans-serif";
+  --font-roboto: Roboto, "sans-serif";
+}

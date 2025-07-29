@@ -1,0 +1,135 @@
+import { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
+import { Footer } from "../Components/Footer";
+import { Header } from "../Components/Header";
+
+export function Matchmaking() {
+    const [amount, setAmount] = useState('');
+    const [challenges, setChallenges] = useState([]);      
+    const [matches, setMatches] = useState([]);            
+    const [myChallengeId, setMyChallengeId] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const socketRef = useRef(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const socket = io("http://localhost:5000/");
+        socketRef.current = socket;
+
+        socket.on("updateChallenges", (list) => setChallenges(list));
+        socket.on("updateMatches", (list) => setMatches(list));
+        socket.on("yourChallengeId", (id) => setMyChallengeId(id));
+        socket.on("matchFound", ({ roomId }) => {
+            navigate(`/room/${roomId}`);
+        });
+
+        return () => socket.disconnect();
+    }, [navigate]);
+
+    // Challenge creator
+    const handleSet = () => {
+        if (parseInt(amount) > 0) {
+            setLoading(true);
+            socketRef.current.emit("challenge:create", { amount }, () => setLoading(false));
+        }
+    };
+
+    // Accept challenge
+    const handlePlay = (challengeId) => {
+        setLoading(true);
+        socketRef.current.emit("challenge:accept", { challengeId }, () => setLoading(false));
+    };
+
+    // VS strip for ongoing matches
+    const VSRow = ({ playerA, playerB, amount }) => (
+        <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
+            <span className="font-bold text-gray-700">{playerA.name}</span>
+            <span className="text-xl font-extrabold text-red-500">VS</span>
+            <span className="font-bold text-gray-700">{playerB.name}</span>
+            <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
+        </div>
+    );
+
+    return (
+        <div className="flex flex-col min-h-screen bg-gray-100">
+            <Header />
+            <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
+
+                {/* Challenge Creation */}
+                <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+                    <form className="flex items-center gap-2"
+                        onSubmit={e => { e.preventDefault(); handleSet(); }}>
+                        <input
+                            type="number"
+                            value={amount}
+                            onChange={e => setAmount(e.target.value)}
+                            placeholder="Enter Amount"
+                            className="h-12 w-36 rounded-l px-3 border border-gray-300 focus:outline-none text-lg"
+                            disabled={loading || myChallengeId !== null}
+                        />
+                        <button
+                            type="submit"
+                            className={`h-12 px-8 rounded-r text-white font-bold text-lg ${loading || myChallengeId ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-800"}`}
+                            disabled={loading || myChallengeId}
+                        >Set</button>
+                    </form>
+                    {myChallengeId && (
+                        <div className="mt-3 text-blue-600 text-center animate-pulse">
+                            Waiting for opponent to click Play...
+                        </div>
+                    )}
+                </div>
+
+                {/* OPEN CHALLENGES (with Play button) */}
+                <div className="mb-7">
+                    <h2 className="text-xl font-bold text-center mb-3">Challenges</h2>
+                    <div className="bg-white rounded shadow px-3 pt-1 pb-2">
+                        {challenges.length === 0 &&
+                            <div className="text-gray-400 py-3 text-center">No open challenges...</div>
+                        }
+                        <ul>
+                            {challenges.map((ch) => (
+                                <li key={ch.id}
+                                    className={`flex items-center justify-between border-b last:border-b-0 py-2 
+                                                ${ch.own ? "bg-blue-50" : ""}`}>
+                                    <span className="font-semibold">{ch.name}</span>
+                                    <span className="text-green-700 font-bold">₹{ch.amount}</span>
+                                    {/* If not user's own challenge, show Play button */}
+                                    {!ch.own &&
+                                        <button
+                                            className="ml-3 px-4 py-1 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
+                                            onClick={() => handlePlay(ch.id)}
+                                            disabled={loading}
+                                        >Play</button>
+                                    }
+                                    {/* If own, show Waiting... */}
+                                    {ch.own &&
+                                        <span className="ml-3 text-xs text-gray-500">(waiting)</span>
+                                    }
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+
+                {/* ONGOING MATCHES */}
+                <div>
+                    <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
+                    <div className="bg-white rounded shadow px-3 py-2">
+                        {matches.length === 0 ?
+                            <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
+                            :
+                            <ul>
+                                {matches.map((m, i) =>
+                                    <li key={m.id || i}><VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} /></li>
+                                )}
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </main>
+            <Footer />
+        </div>
+    );
+}
