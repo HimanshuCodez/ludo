@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -12,6 +13,7 @@ export function GameRoom() {
     const [userEnteredRoomCode, setUserEnteredRoomCode] = useState("");
     const [myPlayerId, setMyPlayerId] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [gameStarted, setGameStarted] = useState(false);
     const [isRedirecting, setIsRedirecting] = useState(false);
     const socketRef = useRef(null);
 
@@ -27,26 +29,23 @@ export function GameRoom() {
 
         socket.on("roomStateUpdate", (data) => {
             setPlayers(data.players);
-            setGeneratedRoomCode(data.generatedRoomCode);
-        });
-
-        socket.on("matchFound", (data) => {
+            setGeneratedRoomCode(data.generatedRoomCode || "");
             if (data.generatedRoomCode) {
-                setGeneratedRoomCode(data.generatedRoomCode);
+                setGameStarted(true);
                 setGameLog(prev => [...prev, `Room code received: ${data.generatedRoomCode}`]);
-            } else {
-                setGameLog(prev => [...prev, "Match found, waiting for room code..."]);
+                redirectToLudoKing(data.generatedRoomCode);
             }
         });
 
-        socket.on("roomCodeGenerated", (code) => {
-            setGeneratedRoomCode(code);
-            setGameLog(prev => [...prev, `Room Code Generated: ${code}`]);
+        socket.on("matchFound", (data) => {
+            setGameLog(prev => [...prev, "Match found, waiting for Ludo room code..."]);
         });
 
         socket.on("userProvidedRoomCode", (code) => {
             setGeneratedRoomCode(code);
+            setGameStarted(true);
             setGameLog(prev => [...prev, `Opponent sent room code: ${code}`]);
+            redirectToLudoKing(code);
         });
 
         socket.on("playerJoined", (player) => {
@@ -57,6 +56,13 @@ export function GameRoom() {
         socket.on("playerLeft", (player) => {
             setPlayers(prev => prev.filter(p => p.socketId !== player.socketId));
             setGameLog(prev => [...prev, `${player.name} left.`]);
+            setGameStarted(false);
+            setGeneratedRoomCode("");
+            setIsRedirecting(false);
+        });
+
+        socket.on("error", ({ message }) => {
+            alert(message);
         });
 
         socket.on("disconnect", () => {
@@ -66,57 +72,39 @@ export function GameRoom() {
         return () => socket.disconnect();
     }, [roomId]);
 
-    // Function to redirect to Ludo King
     const redirectToLudoKing = (roomCode) => {
+        if (!roomCode) return;
         setIsRedirecting(true);
-        
-        // Try different methods to open Ludo King
-        const ludoKingUrls = [
-            `ludoking://join?code=${roomCode}`, // Deep link for mobile app
-            `https://play.google.com/store/apps/details?id=com.ludo.king`, // Play Store fallback
-            `https://apps.apple.com/app/ludo-king/id1131097706` // App Store fallback
-        ];
+        const ludoKingUrl = `https://lk.gggred.com/?rmc=${roomCode}&gt=0`;
+        window.location.href = ludoKingUrl;
 
-        // Try deep link first
-        const deepLink = ludoKingUrls[0];
-        window.location.href = deepLink;
-
-        // Fallback to app store after 2 seconds if deep link doesn't work
+        // Fallback if redirect fails
         setTimeout(() => {
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            
-            if (isAndroid) {
-                window.open(ludoKingUrls[1], '_blank');
-            } else if (isiOS) {
-                window.open(ludoKingUrls[2], '_blank');
-            } else {
-                // For desktop, show instructions
-                alert(`Please open Ludo King on your mobile device and join with room code: ${roomCode}`);
+            if (document.hasFocus()) {
+                setGameLog(prev => [...prev, "Failed to open Ludo King. Please open Ludo King and enter the room code manually."]);
+                setIsRedirecting(false);
             }
-            setIsRedirecting(false);
         }, 2000);
     };
 
     const handleSendRoomCode = () => {
-        if (!userEnteredRoomCode) {
-            alert("Please enter a room code first.");
+        const trimmedCode = userEnteredRoomCode.trim();
+        if (!trimmedCode) {
+            alert("Please enter a room code.");
             return;
         }
 
-        // Validate room code format (adjust as needed)
-        if (userEnteredRoomCode.length < 4) {
-            alert("Please enter a valid room code.");
+        // Validate 8-digit room code
+        if (!/^\d{8}$/.test(trimmedCode)) {
+            alert("Please enter a valid 8-digit Ludo King room code.");
             return;
         }
 
-        socketRef.current.emit("userProvidedRoomCode", { roomId, code: userEnteredRoomCode });
-        setGeneratedRoomCode(userEnteredRoomCode);
-        setGameLog(prev => [...prev, `Room code sent: ${userEnteredRoomCode}`]);
-        
-        // Redirect to Ludo King with the room code
-        redirectToLudoKing(userEnteredRoomCode);
-        
+        socketRef.current.emit("userProvidedRoomCode", { roomId, code: trimmedCode });
+        setGeneratedRoomCode(trimmedCode);
+        setGameStarted(true);
+        setGameLog(prev => [...prev, `Room code sent: ${trimmedCode}`]);
+        redirectToLudoKing(trimmedCode);
         setUserEnteredRoomCode("");
     };
 
@@ -165,7 +153,6 @@ export function GameRoom() {
                         px-2
                     "
                 >
-
                     {/* VS Block */}
                     <div
                         className={`
@@ -179,7 +166,6 @@ export function GameRoom() {
                             gap-3
                         `}
                     >
-                        {/* Player 1 */}
                         <div className="flex flex-col items-center w-1/3">
                             <div className="
                                 w-10 h-10 sm:w-14 sm:h-14 
@@ -192,12 +178,10 @@ export function GameRoom() {
                             <div className="font-semibold text-gray-800 text-sm sm:text-base">{myPlayer?.name || "You"}</div>
                             <div className="text-xs text-gray-500">You</div>
                         </div>
-                        {/* VS and amount */}
                         <div className="w-1/3 text-center flex flex-col items-center">
                             <div className="text-2xl sm:text-3xl font-bold text-red-600 select-none">VS</div>
                             <div className="mt-1 sm:mt-2 text-green-700 font-semibold text-base sm:text-lg tracking-wide">₹{gameAmount}</div>
                         </div>
-                        {/* Player 2 (Opponent) */}
                         <div className="flex flex-col items-center w-1/3">
                             <div className="
                                 w-10 h-10 sm:w-14 sm:h-14 
@@ -212,9 +196,7 @@ export function GameRoom() {
                         </div>
                     </div>
 
-                    
                     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Room Code Section */}
                         <div className="order-1">
                             <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
                                 <div className="font-bold text-gray-600 mb-1 text-md text-center">Ludo Room Code</div>
@@ -227,7 +209,7 @@ export function GameRoom() {
                                     w-full
                                     max-w-xs
                                 ">
-                                    {generatedRoomCode || <span className="text-gray-400">Waiting...</span>}
+                                    {generatedRoomCode || <span className="text-gray-400">Waiting for Ludo room code...</span>}
                                     {generatedRoomCode && (
                                         <button
                                             className="ml-2 text-blue-600 hover:text-blue-800 text-sm"
@@ -236,8 +218,6 @@ export function GameRoom() {
                                         >📋</button>
                                     )}
                                 </div>
-
-                                {/* Join Game Button for existing room code */}
                                 {generatedRoomCode && (
                                     <button
                                         onClick={handleJoinWithRoomCode}
@@ -247,41 +227,39 @@ export function GameRoom() {
                                         {isRedirecting ? "Opening Ludo King..." : "🎮 Join Ludo Game"}
                                     </button>
                                 )}
-
-                                <div className="w-full max-w-xs border-t pt-3">
-                                    <p className="text-xs text-gray-600 mb-2 text-center">Or enter room code from Ludo King:</p>
-                                    <input
-                                        type="text"
-                                        value={userEnteredRoomCode}
-                                        onChange={(e) => setUserEnteredRoomCode(e.target.value.toUpperCase())}
-                                        placeholder="Enter Room Code"
-                                        className="border w-full text-lg py-2 px-3 rounded focus:ring focus:ring-blue-300 mb-3"
-                                        maxLength="10"
-                                    />
-                                    <button
-                                        onClick={handleSendRoomCode}
-                                        className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
-                                        disabled={isRedirecting}
-                                    >
-                                        {isRedirecting ? "Opening Ludo King..." : "Join & Play"}
-                                    </button>
-                                </div>
-
-                                {copied && (
-                                    <div className="mt-4 px-3 py-2 rounded bg-green-600 text-white font-semibold shadow text-center text-sm sm:text-base">
-                                        Room code copied! Paste it in Ludo King!
+                                {!gameStarted && (
+                                    <div className="w-full max-w-xs border-t pt-3">
+                                        <p className="text-xs text-gray-600 mb-2 text-center">Paste room code from Ludo King:</p>
+                                        <input
+                                            type="text"
+                                            value={userEnteredRoomCode}
+                                            onChange={(e) => setUserEnteredRoomCode(e.target.value)}
+                                            placeholder="Enter Ludo Room Code"
+                                            className="border w-full text-lg py-2 px-3 rounded focus:ring focus:ring-blue-300 mb-3"
+                                            maxLength="8"
+                                        />
+                                        <button
+                                            onClick={handleSendRoomCode}
+                                            className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
+                                            disabled={isRedirecting}
+                                        >
+                                            {isRedirecting ? "Opening Ludo King..." : "Join & Play"}
+                                        </button>
                                     </div>
                                 )}
-
+                                {copied && (
+                                    <div className="mt-4 px-3 py-2 rounded bg-green-600 text-white font-semibold shadow text-center text-sm sm:text-base">
+                                        Room code copied! Paste it in Ludo King if needed!
+                                    </div>
+                                )}
                                 {isRedirecting && (
                                     <div className="mt-4 px-3 py-2 rounded bg-blue-600 text-white font-semibold shadow text-center text-sm sm:text-base animate-pulse">
-                                        Redirecting to Ludo King...
+                                        Redirecting to Ludo King... If not redirected, open Ludo King and enter the code manually.
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Game Result Section */}
                         <div className="order-2">
                             <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
                                 <div className="mb-2 font-bold text-lg text-center">Game Result</div>
@@ -292,18 +270,21 @@ export function GameRoom() {
                                     <button
                                         onClick={() => handleGameResult("I WON")}
                                         className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700"
+                                        disabled={!gameStarted}
                                     >
                                         I WON
                                     </button>
                                     <button
                                         onClick={() => handleGameResult("I LOST")}
                                         className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700"
+                                        disabled={!gameStarted}
                                     >
                                         I LOST
                                     </button>
                                     <button
                                         onClick={() => handleGameResult("CANCEL")}
                                         className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500"
+                                        disabled={!gameStarted}
                                     >
                                         CANCEL
                                     </button>
@@ -312,12 +293,11 @@ export function GameRoom() {
                         </div>
                     </div>
 
-                    {/* Instructions Section */}
                     <div className="mt-6">
                         <div className="bg-blue-50 rounded-lg p-4">
                             <div className="font-semibold mb-2 text-base text-center">How to Play:</div>
                             <ol className="text-sm text-gray-700 space-y-1">
-                                <li>1. Wait for room code or enter one from Ludo King</li>
+                                <li>1. Create a room in Ludo King (Play with Friends) and paste the room code here</li>
                                 <li>2. Click "Join & Play" to open Ludo King</li>
                                 <li>3. Play your match in Ludo King</li>
                                 <li>4. Return here and submit your result</li>
@@ -325,7 +305,6 @@ export function GameRoom() {
                         </div>
                     </div>
 
-                    {/* Game Log Section */}
                     <div className="mt-6">
                         <div className="bg-white rounded-lg shadow p-4">
                             <div className="font-semibold mb-1 text-base sm:text-lg">Game Events</div>
