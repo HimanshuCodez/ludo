@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,14 +10,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-    origin: [
-        "https://ludo-zeta-self.vercel.app", 
-        "http://localhost:5173",                
-    ],
-    methods: ["GET", "POST"],
-    credentials: true, 
-}
-
+        origin: [
+            "https://ludo-zeta-self.vercel.app",
+            "http://localhost:5173",
+        ],
+        methods: ["GET", "POST"],
+        credentials: true,
+    }
 });
 
 app.use(cors());
@@ -97,14 +97,13 @@ io.on('connection', (socket) => {
         challenges = challenges.filter(c => c.id !== data.challengeId);
 
         const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
-        const generatedLudoAppCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         const match = {
             id: "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
             playerA: { id: challenge.createdBy, name: challenge.name },
             playerB: { id: socket.id, name: playerBName },
             amount: challenge.amount,
-            generatedRoomCode: generatedLudoAppCode,
+            generatedRoomCode: "", // Wait for Ludo King code
             playerResults: {},
         };
 
@@ -112,14 +111,8 @@ io.on('connection', (socket) => {
         saveMatchesToFile();
         updateAllQueues();
 
-        io.to(challenge.createdBy).emit('matchFound', {
-            roomId: match.id,
-            generatedRoomCode: match.generatedRoomCode,
-        });
-        io.to(socket.id).emit('matchFound', {
-            roomId: match.id,
-            generatedRoomCode: match.generatedRoomCode,
-        });
+        io.to(challenge.createdBy).emit('matchFound', { roomId: match.id });
+        io.to(socket.id).emit('matchFound', { roomId: match.id });
 
         if (ack) ack(true);
     });
@@ -150,15 +143,36 @@ io.on('connection', (socket) => {
     // === USER PROVIDES ROOM CODE ===
     socket.on('userProvidedRoomCode', ({ roomId, code }) => {
         const match = matches.find(m => m.id === roomId);
-        if (!match) return;
+        if (!match) {
+            socket.emit('error', { message: 'Room not found.' });
+            return;
+        }
+
+        // Validate 8-digit room code
+        if (!/^\d{8}$/.test(code)) {
+            socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
+            return;
+        }
 
         match.generatedRoomCode = code;
         saveMatchesToFile();
 
+        io.to(roomId).emit('userProvidedRoomCode', code);
         io.to(roomId).emit('roomStateUpdate', {
             players: [match.playerA, match.playerB],
             generatedRoomCode: code,
         });
+    });
+
+    // === SUBMIT GAME RESULT ===
+    socket.on('submitGameResult', ({ roomId, result }) => {
+        const match = matches.find(m => m.id === roomId);
+        if (!match) return;
+
+        match.playerResults[socket.id] = result;
+        saveMatchesToFile();
+
+        io.to(roomId).emit('gameResultUpdate', match.playerResults);
     });
 
     // === DISCONNECT ===
