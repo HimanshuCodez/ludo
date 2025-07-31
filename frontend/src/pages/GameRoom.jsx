@@ -18,7 +18,12 @@ export function GameRoom() {
   const retryCount = useRef(0);
 
   useEffect(() => {
-    const socket = io("https://ludo-p65v.onrender.com/", { transports: ["websocket"] });
+    const socket = io("https://ludo-p65v.onrender.com/", {
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -30,12 +35,11 @@ export function GameRoom() {
 
     socket.on("roomStateUpdate", (data) => {
       console.log(`[Client] Received roomStateUpdate:`, data);
-      setPlayers(data.players);
+      setPlayers(data.players.filter((p) => p && p.id)); // Ensure valid players
       if (data.generatedRoomCode && data.generatedRoomCode !== generatedRoomCode) {
         setGeneratedRoomCode(data.generatedRoomCode);
         setGameStarted(true);
         setGameLog((prev) => [...prev, `Room code received: ${data.generatedRoomCode}`]);
-        // Only redirect if this client provided the code
         if (data.roomCodeProvider === socket.id) {
           redirectToLudoKing(data.generatedRoomCode);
         }
@@ -44,7 +48,6 @@ export function GameRoom() {
 
     socket.on("userProvidedRoomCode", (code) => {
       console.log(`[Client] Received userProvidedRoomCode: ${code}`);
-      // Rely on roomStateUpdate to handle state changes
       setGameLog((prev) => [...prev, `Opponent sent room code: ${code}`]);
     });
 
@@ -55,7 +58,7 @@ export function GameRoom() {
 
     socket.on("playerJoined", (player) => {
       console.log(`[Client] Player joined:`, player);
-      setPlayers((prev) => [...prev, player]);
+      setPlayers((prev) => [...prev.filter((p) => p.socketId !== player.socketId), player]);
       setGameLog((prev) => [...prev, `${player.name} joined.`]);
     });
 
@@ -91,7 +94,9 @@ export function GameRoom() {
       console.log("[Client] Disconnected from server");
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+    };
   }, [roomId]);
 
   const redirectToLudoKing = (roomCode) => {

@@ -35,7 +35,12 @@ if (!fs.existsSync(MATCHES_FILE_PATH)) {
 }
 
 function saveMatchesToFile() {
-    fs.writeFileSync(MATCHES_FILE_PATH, JSON.stringify(matches, null, 2));
+    try {
+        fs.writeFileSync(MATCHES_FILE_PATH, JSON.stringify(matches, null, 2));
+        console.log(`[Server] Matches saved to file: ${matches.length} matches`);
+    } catch (err) {
+        console.error(`[Server] Error saving matches: ${err.message}`);
+    }
 }
 
 function loadMatchesFromFile() {
@@ -103,9 +108,10 @@ io.on('connection', (socket) => {
         challenges = challenges.filter(c => c.id !== data.challengeId);
 
         const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
+        const matchId = "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
 
         const match = {
-            id: "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+            id: matchId,
             playerA: { id: challenge.createdBy, name: challenge.name },
             playerB: { id: socket.id, name: playerBName },
             amount: challenge.amount,
@@ -118,11 +124,15 @@ io.on('connection', (socket) => {
         saveMatchesToFile();
         updateAllQueues();
 
-        io.to(challenge.createdBy).emit('matchFound', { roomId: match.id });
-        io.to(socket.id).emit('matchFound', { roomId: match.id });
         console.log(`[Server] Match created: ${match.id} between ${match.playerA.name} and ${match.playerB.name} for ₹${match.amount}`);
 
-        if (ack) ack(true);
+        // Ensure match is ready before emitting
+        setTimeout(() => {
+            io.to(challenge.createdBy).emit('matchFound', { roomId: match.id });
+            io.to(socket.id).emit('matchFound', { roomId: match.id });
+            console.log(`[Server] Emitted matchFound for room ${match.id}`);
+            if (ack) ack(true);
+        }, 100);
     });
 
     socket.on('joinRoom', ({ roomId, userName }) => {
@@ -140,7 +150,7 @@ io.on('connection', (socket) => {
         console.log(`[Server] Sockets in room ${roomId}:`, socketsInRoom);
 
         const roomData = {
-            players: [match.playerA, match.playerB],
+            players: [match.playerA, match.playerB].filter(p => p && p.id),
             generatedRoomCode: match.generatedRoomCode,
             roomCodeProvider: match.roomCodeProvider,
         };
@@ -156,30 +166,24 @@ io.on('connection', (socket) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
             socket.emit('error', { message: 'Room not found.' });
+            console.log(`[❌ Server] Room not found for userProvidedRoomCode: ${roomId}`);
             return;
         }
 
         if (!/^\d{8}$/.test(code)) {
             socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
+            console.log(`[❌ Server] Invalid room code ${code} for room ${roomId}`);
             return;
         }
 
         if (match.generatedRoomCode && match.roomCodeProvider !== socket.id) {
             socket.emit('error', { message: 'Room code already provided by another player.' });
+            console.log(`[❌ Server] Room code already provided for room ${roomId}`);
             return;
         }
 
         const socketsInRoom = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
         console.log(`[Server] Sockets in room ${roomId} before emitting code ${code}:`, socketsInRoom);
-
-        if (socketsInRoom.length < 2 && retryCount[roomId] < 3) {
-            console.log(`[Server] Only ${socketsInRoom.length} socket(s) in room ${roomId}. Retrying...`);
-            retryCount[roomId] = (retryCount[roomId] || 0) + 1;
-            setTimeout(() => {
-                socket.emit('userProvidedRoomCode', { roomId, code });
-            }, 1000 * retryCount[roomId]);
-            return;
-        }
 
         match.generatedRoomCode = code;
         match.roomCodeProvider = socket.id;
@@ -187,7 +191,7 @@ io.on('connection', (socket) => {
 
         io.to(roomId).emit('userProvidedRoomCode', code);
         io.to(roomId).emit('roomStateUpdate', {
-            players: [match.playerA, match.playerB],
+            players: [match.playerA, match.playerB].filter(p => p && p.id),
             generatedRoomCode: code,
             roomCodeProvider: socket.id,
         });
@@ -198,6 +202,7 @@ io.on('connection', (socket) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
             socket.emit('error', { message: 'Room not found.' });
+            console.log(`[❌ Server] Room not found for submitGameResult: ${roomId}`);
             return;
         }
 
@@ -250,8 +255,6 @@ function getClientMatches() {
         amount: m.amount,
     }));
 }
-
-const retryCount = {};
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
