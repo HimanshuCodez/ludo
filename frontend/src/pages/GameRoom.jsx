@@ -21,8 +21,9 @@ export function GameRoom() {
     const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
     socketRef.current = socket;
 
@@ -30,12 +31,13 @@ export function GameRoom() {
       setMyPlayerId(socket.id);
       const userName = "User_" + Math.floor(Math.random() * 1000);
       console.log(`[Client] Connected as ${socket.id}, joining room ${roomId} as ${userName}`);
+      retryCount.current = 0; // Reset retry count on connect
       socket.emit("joinRoom", { roomId, userName });
     });
 
     socket.on("roomStateUpdate", (data) => {
       console.log(`[Client] Received roomStateUpdate:`, data);
-      setPlayers(data.players.filter((p) => p && p.id)); // Ensure valid players
+      setPlayers(data.players.filter((p) => p && p.id));
       if (data.generatedRoomCode && data.generatedRoomCode !== generatedRoomCode) {
         setGeneratedRoomCode(data.generatedRoomCode);
         setGameStarted(true);
@@ -73,13 +75,14 @@ export function GameRoom() {
 
     socket.on("roomNotFound", ({ message }) => {
       console.log(`[Client] Room not found: ${message}`);
-      if (retryCount.current < 3) {
+      if (retryCount.current < 5) {
         retryCount.current += 1;
+        const delay = Math.pow(2, retryCount.current) * 1000; // Exponential backoff: 2s, 4s, 8s, 16s, 32s
         setTimeout(() => {
           const userName = "User_" + Math.floor(Math.random() * 1000);
-          console.log(`[Client] Retrying joinRoom (${retryCount.current}/3) for room ${roomId}`);
+          console.log(`[Client] Retrying joinRoom (${retryCount.current}/5) for room ${roomId}`);
           socket.emit("joinRoom", { roomId, userName });
-        }, 1000 * retryCount.current);
+        }, delay);
       } else {
         alert("Room not found. Please try again or create a new match.");
       }
@@ -92,10 +95,29 @@ export function GameRoom() {
 
     socket.on("disconnect", () => {
       console.log("[Client] Disconnected from server");
+      setGameLog((prev) => [...prev, "Disconnected from server. Reconnecting..."]);
+    });
+
+    socket.on("reconnect", () => {
+      console.log("[Client] Reconnected to server");
+      setGameLog((prev) => [...prev, "Reconnected to server."]);
+      retryCount.current = 0;
+      const userName = "User_" + Math.floor(Math.random() * 1000);
+      socket.emit("joinRoom", { roomId, userName });
     });
 
     return () => {
-      socket.disconnect();
+      // Remove socket.disconnect() to persist connection
+      socket.off("connect");
+      socket.off("roomStateUpdate");
+      socket.off("userProvidedRoomCode");
+      socket.off("matchFound");
+      socket.off("playerJoined");
+      socket.off("playerLeft");
+      socket.off("roomNotFound");
+      socket.off("error");
+      socket.off("disconnect");
+      socket.off("reconnect");
     };
   }, [roomId]);
 
