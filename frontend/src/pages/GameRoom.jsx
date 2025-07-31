@@ -15,6 +15,7 @@ export function GameRoom() {
   const [gameStarted, setGameStarted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const socketRef = useRef(null);
+  const retryCount = useRef(0);
 
   useEffect(() => {
     const socket = io("https://ludo-p65v.onrender.com/", { transports: ["websocket"] });
@@ -23,36 +24,43 @@ export function GameRoom() {
     socket.on("connect", () => {
       setMyPlayerId(socket.id);
       const userName = "User_" + Math.floor(Math.random() * 1000);
+      console.log(`[Client] Connected as ${socket.id}, joining room ${roomId} as ${userName}`);
       socket.emit("joinRoom", { roomId, userName });
     });
 
     socket.on("roomStateUpdate", (data) => {
+      console.log(`[Client] Received roomStateUpdate:`, data);
       setPlayers(data.players);
-      setGeneratedRoomCode(data.generatedRoomCode || "");
-      if (data.generatedRoomCode && !gameStarted) {
+      if (data.generatedRoomCode && data.generatedRoomCode !== generatedRoomCode) {
+        setGeneratedRoomCode(data.generatedRoomCode);
         setGameStarted(true);
         setGameLog((prev) => [...prev, `Room code received: ${data.generatedRoomCode}`]);
-        redirectToLudoKing(data.generatedRoomCode);
+        // Only redirect if this client provided the code
+        if (data.roomCodeProvider === socket.id) {
+          redirectToLudoKing(data.generatedRoomCode);
+        }
       }
     });
 
+    socket.on("userProvidedRoomCode", (code) => {
+      console.log(`[Client] Received userProvidedRoomCode: ${code}`);
+      // Rely on roomStateUpdate to handle state changes
+      setGameLog((prev) => [...prev, `Opponent sent room code: ${code}`]);
+    });
+
     socket.on("matchFound", () => {
+      console.log(`[Client] Match found for room ${roomId}`);
       setGameLog((prev) => [...prev, "Match found, waiting for Ludo room code..."]);
     });
 
-    socket.on("userProvidedRoomCode", (code) => {
-      setGeneratedRoomCode(code);
-      setGameStarted(true);
-      setGameLog((prev) => [...prev, `Opponent sent room code: ${code}`]);
-      redirectToLudoKing(code);
-    });
-
     socket.on("playerJoined", (player) => {
+      console.log(`[Client] Player joined:`, player);
       setPlayers((prev) => [...prev, player]);
       setGameLog((prev) => [...prev, `${player.name} joined.`]);
     });
 
     socket.on("playerLeft", (player) => {
+      console.log(`[Client] Player left:`, player);
       setPlayers((prev) => prev.filter((p) => p.socketId !== player.socketId));
       setGameLog((prev) => [...prev, `${player.name} left.`]);
       setGameStarted(false);
@@ -60,12 +68,27 @@ export function GameRoom() {
       setIsRedirecting(false);
     });
 
+    socket.on("roomNotFound", ({ message }) => {
+      console.log(`[Client] Room not found: ${message}`);
+      if (retryCount.current < 3) {
+        retryCount.current += 1;
+        setTimeout(() => {
+          const userName = "User_" + Math.floor(Math.random() * 1000);
+          console.log(`[Client] Retrying joinRoom (${retryCount.current}/3) for room ${roomId}`);
+          socket.emit("joinRoom", { roomId, userName });
+        }, 1000 * retryCount.current);
+      } else {
+        alert("Room not found. Please try again or create a new match.");
+      }
+    });
+
     socket.on("error", ({ message }) => {
+      console.log(`[Client] Error: ${message}`);
       alert(message);
     });
 
     socket.on("disconnect", () => {
-      console.log("[Socket] Disconnected");
+      console.log("[Client] Disconnected from server");
     });
 
     return () => socket.disconnect();
@@ -74,6 +97,7 @@ export function GameRoom() {
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
     setIsRedirecting(true);
+    console.log(`[Client] Redirecting to Ludo King with code ${roomCode}`);
 
     const webLink = `https://lk.gggred.com/?rmc=${roomCode}&gt=0`;
     const androidIntent =
@@ -93,7 +117,7 @@ export function GameRoom() {
       if (document.hasFocus()) {
         setGameLog((prev) => [
           ...prev,
-          "👆 If nothing happened, open Ludo King manually and paste the room code."
+          "👆 If nothing happened, open Ludo King manually and paste the room code.",
         ]);
         setIsRedirecting(false);
       }
@@ -111,6 +135,7 @@ export function GameRoom() {
       return;
     }
 
+    console.log(`[Client] Sending room code ${trimmedCode} for room ${roomId}`);
     socketRef.current.emit("userProvidedRoomCode", { roomId, code: trimmedCode });
     setGeneratedRoomCode(trimmedCode);
     setGameStarted(true);
@@ -132,10 +157,12 @@ export function GameRoom() {
       navigator.clipboard.writeText(generatedRoomCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
+      console.log(`[Client] Copied room code ${generatedRoomCode}`);
     }
   };
 
   const handleGameResult = (result) => {
+    console.log(`[Client] Submitting game result ${result} for room ${roomId}`);
     socketRef.current.emit("submitGameResult", { roomId, result });
     setGameLog((prev) => [...prev, `Game Result Submitted: ${result}`]);
     alert(`You submitted: ${result}. Awaiting opponent's submission.`);
@@ -150,7 +177,6 @@ export function GameRoom() {
       <Header />
       <main className="flex-grow w-full flex flex-col items-center py-4 px-1 sm:px-3">
         <div className="w-full max-w-md md:max-w-2xl bg-white rounded-xl shadow-md md:shadow-lg md:my-8 md:px-8 py-6 px-2">
-          {/* VS Block */}
           <div className="flex items-center justify-between w-full p-3 rounded-2xl shadow bg-gradient-to-tr from-blue-100 via-white to-blue-50 mt-0 md:mt-2 gap-3">
             <div className="flex flex-col items-center w-1/3">
               <div className="w-10 h-10 sm:w-14 sm:h-14 bg-blue-400 rounded-full flex items-center justify-center text-white text-base sm:text-xl font-bold mb-1">
@@ -174,7 +200,6 @@ export function GameRoom() {
             </div>
           </div>
 
-          {/* Room Code & Join Controls */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="order-1">
               <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">

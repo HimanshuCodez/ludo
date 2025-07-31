@@ -25,11 +25,9 @@ app.get('/', (req, res) => {
     res.send('Ludo Challenge Pool Server is Running!');
 });
 
-// --- CHALLENGE POOL & MATCH STATE ---
 let challenges = [];
 let matches = [];
 
-// === FILE PERSISTENCE ===
 const MATCHES_FILE_PATH = path.join(__dirname, 'matches.json');
 
 if (!fs.existsSync(MATCHES_FILE_PATH)) {
@@ -53,14 +51,12 @@ function loadMatchesFromFile() {
 
 loadMatchesFromFile();
 
-// === SOCKET HANDLING ===
 io.on('connection', (socket) => {
     console.log('✅ Socket connected:', socket.id);
 
     socket.emit('updateChallenges', getClientChallenges(socket.id));
     socket.emit('updateMatches', getClientMatches());
 
-    // === CREATE CHALLENGE ===
     socket.on('challenge:create', (data, ack) => {
         if (challenges.find(c => c.createdBy === socket.id)) {
             socket.emit('error', { message: 'You already have an active challenge.' });
@@ -91,7 +87,6 @@ io.on('connection', (socket) => {
         if (ack) ack(true);
     });
 
-    // === ACCEPT CHALLENGE ===
     socket.on('challenge:accept', (data, ack) => {
         const challenge = challenges.find(c => c.id === data.challengeId);
         if (!challenge) {
@@ -115,7 +110,7 @@ io.on('connection', (socket) => {
             playerB: { id: socket.id, name: playerBName },
             amount: challenge.amount,
             generatedRoomCode: "",
-            roomCodeProvider: null, // Track who provided the room code
+            roomCodeProvider: null,
             playerResults: {},
         };
 
@@ -130,7 +125,6 @@ io.on('connection', (socket) => {
         if (ack) ack(true);
     });
 
-    // === JOIN ROOM ===
     socket.on('joinRoom', ({ roomId, userName }) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
@@ -158,7 +152,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // === USER PROVIDES ROOM CODE ===
     socket.on('userProvidedRoomCode', ({ roomId, code }) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
@@ -176,8 +169,20 @@ io.on('connection', (socket) => {
             return;
         }
 
+        const socketsInRoom = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
+        console.log(`[Server] Sockets in room ${roomId} before emitting code ${code}:`, socketsInRoom);
+
+        if (socketsInRoom.length < 2 && retryCount[roomId] < 3) {
+            console.log(`[Server] Only ${socketsInRoom.length} socket(s) in room ${roomId}. Retrying...`);
+            retryCount[roomId] = (retryCount[roomId] || 0) + 1;
+            setTimeout(() => {
+                socket.emit('userProvidedRoomCode', { roomId, code });
+            }, 1000 * retryCount[roomId]);
+            return;
+        }
+
         match.generatedRoomCode = code;
-        match.roomCodeProvider = socket.id; // Track who provided the code
+        match.roomCodeProvider = socket.id;
         saveMatchesToFile();
 
         io.to(roomId).emit('userProvidedRoomCode', code);
@@ -189,7 +194,6 @@ io.on('connection', (socket) => {
         console.log(`[Server] Room code ${code} provided by socket ${socket.id} for room ${roomId}`);
     });
 
-    // === SUBMIT GAME RESULT ===
     socket.on('submitGameResult', ({ roomId, result }) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
@@ -203,7 +207,6 @@ io.on('connection', (socket) => {
         console.log(`[Server] Game result submitted by ${socket.id} for room ${roomId}: ${result}`);
     });
 
-    // === DISCONNECT ===
     socket.on('disconnect', () => {
         console.log(`❌ Socket disconnected: ${socket.id}`);
 
@@ -227,7 +230,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// === HELPERS ===
 function updateAllQueues() {
     io.emit('updateChallenges', getClientChallenges());
     io.emit('updateMatches', getClientMatches());
@@ -248,6 +250,8 @@ function getClientMatches() {
         amount: m.amount,
     }));
 }
+
+const retryCount = {};
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
