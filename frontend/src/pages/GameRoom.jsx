@@ -1,4 +1,3 @@
-// src/pages/GameRoom.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -30,7 +29,7 @@ export function GameRoom() {
     socket.on("roomStateUpdate", (data) => {
       setPlayers(data.players);
       setGeneratedRoomCode(data.generatedRoomCode || "");
-      if (data.generatedRoomCode) {
+      if (data.generatedRoomCode && !gameStarted) {
         setGameStarted(true);
         setGameLog((prev) => [...prev, `Room code received: ${data.generatedRoomCode}`]);
         redirectToLudoKing(data.generatedRoomCode);
@@ -68,16 +67,10 @@ export function GameRoom() {
     socket.on("disconnect", () => {
       console.log("[Socket] Disconnected");
     });
-    
-
 
     return () => socket.disconnect();
   }, [roomId]);
-useEffect(() => {
-  if (generatedRoomCode && !gameStarted) {
-    setGameLog(prev => [...prev, `📢 Opponent provided room code: ${generatedRoomCode}`]);
-  }
-}, [generatedRoomCode, gameStarted]);
+
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
     setIsRedirecting(true);
@@ -157,10 +150,8 @@ useEffect(() => {
       <Header />
       <main className="flex-grow w-full flex flex-col items-center py-4 px-1 sm:px-3">
         <div className="w-full max-w-md md:max-w-2xl bg-white rounded-xl shadow-md md:shadow-lg md:my-8 md:px-8 py-6 px-2">
-
           {/* VS Block */}
           <div className="flex items-center justify-between w-full p-3 rounded-2xl shadow bg-gradient-to-tr from-blue-100 via-white to-blue-50 mt-0 md:mt-2 gap-3">
-            {/* You */}
             <div className="flex flex-col items-center w-1/3">
               <div className="w-10 h-10 sm:w-14 sm:h-14 bg-blue-400 rounded-full flex items-center justify-center text-white text-base sm:text-xl font-bold mb-1">
                 {myPlayer?.name?.charAt(0) || "U"}
@@ -168,14 +159,12 @@ useEffect(() => {
               <div className="font-semibold text-gray-800 text-sm sm:text-base">{myPlayer?.name || "You"}</div>
               <div className="text-xs text-gray-500">You</div>
             </div>
-            {/* VS & Amount */}
             <div className="w-1/3 text-center flex flex-col items-center">
               <div className="text-2xl sm:text-3xl font-bold text-red-600 select-none">VS</div>
               <div className="mt-1 sm:mt-2 text-green-700 font-semibold text-base sm:text-lg tracking-wide">
                 ₹{gameAmount}
               </div>
             </div>
-            {/* Opponent */}
             <div className="flex flex-col items-center w-1/3">
               <div className="w-10 h-10 sm:w-14 sm:h-14 bg-orange-400 rounded-full flex items-center justify-center text-white text-base sm:text-xl font-bold mb-1">
                 {opponentPlayer?.name?.charAt(0) || "O"}
@@ -189,27 +178,24 @@ useEffect(() => {
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="order-1">
               <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
-                {/* Code Display */}
                 <div className="font-bold text-gray-600 mb-1 text-md text-center">Ludo Room Code</div>
-               <div className="font-mono text-2xl sm:text-3xl tracking-widest text-black mb-2 border px-4 py-2 rounded bg-gray-50 flex items-center justify-center gap-1 w-full max-w-xs">
-  {generatedRoomCode ? (
-    <>
-      <span>{generatedRoomCode}</span>
-      <button
-        className="ml-2 text-blue-600 hover:text-blue-800 text-sm"
-        title="Copy Room Code"
-        onClick={handleCopyRoomCode}
-      >
-        📋
-      </button>
-    </>
-  ) : (
-    <span className="text-gray-400">Waiting for Ludo room code...</span>
-  )}
-</div>
+                <div className="font-mono text-2xl sm:text-3xl tracking-widest text-black mb-2 border px-4 py-2 rounded bg-gray-50 flex items-center justify-center gap-1 w-full max-w-xs">
+                  {generatedRoomCode ? (
+                    <>
+                      <span>{generatedRoomCode}</span>
+                      <button
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-sm"
+                        title="Copy Room Code"
+                        onClick={handleCopyRoomCode}
+                      >
+                        📋
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Waiting for Ludo room code...</span>
+                  )}
+                </div>
 
-
-                {/* Deep‑link / Join button */}
                 {generatedRoomCode && (
                   <button
                     onClick={handleJoinWithRoomCode}
@@ -220,7 +206,6 @@ useEffect(() => {
                   </button>
                 )}
 
-                {/* Manual entry fallback */}
                 {!gameStarted && (
                   <div className="w-full max-w-xs border-t pt-3">
                     <p className="text-xs text-gray-600 mb-2 text-center">Paste room code from Ludo King:</p>
@@ -242,7 +227,6 @@ useEffect(() => {
                   </div>
                 )}
 
-                {/* Copy & Redirecting Notices */}
                 {copied && (
                   <div className="mt-4 px-3 py-2 rounded bg-green-600 text-white font-semibold shadow text-center text-sm sm:text-base">
                     Room code copied! Paste it in Ludo King if needed!
@@ -256,7 +240,6 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Game Result Section */}
             <div className="order-2">
               <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
                 <div className="mb-2 font-bold text-lg text-center">Game Result</div>
@@ -290,7 +273,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* How to Play */}
           <div className="mt-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="font-semibold mb-2 text-base text-center">How to Play:</div>
@@ -303,7 +285,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Event Log */}
           <div className="mt-6">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="font-semibold mb-1 text-base sm:text-lg">Game Events</div>
@@ -318,7 +299,6 @@ useEffect(() => {
               </ul>
             </div>
           </div>
-
         </div>
       </main>
       <Footer />

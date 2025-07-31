@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -33,7 +32,6 @@ let matches = [];
 // === FILE PERSISTENCE ===
 const MATCHES_FILE_PATH = path.join(__dirname, 'matches.json');
 
-// Ensure matches.json exists
 if (!fs.existsSync(MATCHES_FILE_PATH)) {
     fs.writeFileSync(MATCHES_FILE_PATH, JSON.stringify([]));
 }
@@ -48,12 +46,11 @@ function loadMatchesFromFile() {
         matches = JSON.parse(data);
         console.log(`[Server] Loaded ${matches.length} matches from file.`);
     } catch (err) {
-        console.log('[Server] No previous match file found. Starting fresh.');
+        console.log('[Server] Error loading matches file:', err.message);
         matches = [];
     }
 }
 
-// Load matches on server start
 loadMatchesFromFile();
 
 // === SOCKET HANDLING ===
@@ -66,12 +63,19 @@ io.on('connection', (socket) => {
     // === CREATE CHALLENGE ===
     socket.on('challenge:create', (data, ack) => {
         if (challenges.find(c => c.createdBy === socket.id)) {
+            socket.emit('error', { message: 'You already have an active challenge.' });
             if (ack) ack(false);
             return;
         }
 
         const name = data.name || `Player_${socket.id.substring(0, 4)}`;
         const amount = parseInt(data.amount);
+
+        if (isNaN(amount) || amount <= 0) {
+            socket.emit('error', { message: 'Invalid challenge amount.' });
+            if (ack) ack(false);
+            return;
+        }
 
         const challenge = {
             id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
@@ -83,13 +87,20 @@ io.on('connection', (socket) => {
         challenges.push(challenge);
         socket.emit('yourChallengeId', challenge.id);
         updateAllQueues();
+        console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
         if (ack) ack(true);
     });
 
     // === ACCEPT CHALLENGE ===
     socket.on('challenge:accept', (data, ack) => {
         const challenge = challenges.find(c => c.id === data.challengeId);
-        if (!challenge || challenge.createdBy === socket.id) {
+        if (!challenge) {
+            socket.emit('error', { message: 'Challenge not found.' });
+            if (ack) ack(false);
+            return;
+        }
+        if (challenge.createdBy === socket.id) {
+            socket.emit('error', { message: 'Cannot accept your own challenge.' });
             if (ack) ack(false);
             return;
         }
@@ -103,7 +114,8 @@ io.on('connection', (socket) => {
             playerA: { id: challenge.createdBy, name: challenge.name },
             playerB: { id: socket.id, name: playerBName },
             amount: challenge.amount,
-            generatedRoomCode: "", // Wait for Ludo King code
+            generatedRoomCode: "",
+            roomCodeProvider: null, // Track who provided the room code
             playerResults: {},
         };
 
@@ -113,6 +125,7 @@ io.on('connection', (socket) => {
 
         io.to(challenge.createdBy).emit('matchFound', { roomId: match.id });
         io.to(socket.id).emit('matchFound', { roomId: match.id });
+        console.log(`[Server] Match created: ${match.id} between ${match.playerA.name} and ${match.playerB.name} for ₹${match.amount}`);
 
         if (ack) ack(true);
     });
@@ -122,11 +135,11 @@ io.on('connection', (socket) => {
         const match = matches.find(m => m.id === roomId);
         if (!match) {
             console.log(`[❌ Server] Room NOT FOUND for ID: ${roomId}`);
-            socket.emit('roomNotFound');
+            socket.emit('roomNotFound', { message: 'Room not found.' });
             return;
         }
 
-        console.log(`[Server] ${userName} joined room: ${roomId}`);
+        console.log(`[Server] ${userName} (socket: ${socket.id}) joined room: ${roomId}`);
         socket.join(roomId);
 
         const socketsInRoom = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
@@ -135,9 +148,14 @@ io.on('connection', (socket) => {
         const roomData = {
             players: [match.playerA, match.playerB],
             generatedRoomCode: match.generatedRoomCode,
+            roomCodeProvider: match.roomCodeProvider,
         };
 
         io.to(roomId).emit('roomStateUpdate', roomData);
+        if (match.generatedRoomCode) {
+            socket.emit('userProvidedRoomCode', match.generatedRoomCode);
+            console.log(`[Server] Sent existing room code ${match.generatedRoomCode} to ${userName} in room ${roomId}`);
+        }
     });
 
     // === USER PROVIDES ROOM CODE ===
@@ -148,31 +166,41 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Validate 8-digit room code
         if (!/^\d{8}$/.test(code)) {
             socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
             return;
         }
 
+        if (match.generatedRoomCode && match.roomCodeProvider !== socket.id) {
+            socket.emit('error', { message: 'Room code already provided by another player.' });
+            return;
+        }
+
         match.generatedRoomCode = code;
+        match.roomCodeProvider = socket.id; // Track who provided the code
         saveMatchesToFile();
 
         io.to(roomId).emit('userProvidedRoomCode', code);
         io.to(roomId).emit('roomStateUpdate', {
             players: [match.playerA, match.playerB],
             generatedRoomCode: code,
+            roomCodeProvider: socket.id,
         });
+        console.log(`[Server] Room code ${code} provided by socket ${socket.id} for room ${roomId}`);
     });
 
     // === SUBMIT GAME RESULT ===
     socket.on('submitGameResult', ({ roomId, result }) => {
         const match = matches.find(m => m.id === roomId);
-        if (!match) return;
+        if (!match) {
+            socket.emit('error', { message: 'Room not found.' });
+            return;
+        }
 
         match.playerResults[socket.id] = result;
         saveMatchesToFile();
-
         io.to(roomId).emit('gameResultUpdate', match.playerResults);
+        console.log(`[Server] Game result submitted by ${socket.id} for room ${roomId}: ${result}`);
     });
 
     // === DISCONNECT ===
@@ -184,8 +212,12 @@ io.on('connection', (socket) => {
         const leftMatches = matches.filter(m => m.playerA.id === socket.id || m.playerB.id === socket.id);
         if (leftMatches.length) {
             leftMatches.forEach(m => {
-                io.to(m.playerA.id).emit('gameEnd', { message: 'Opponent left the match.' });
-                io.to(m.playerB.id).emit('gameEnd', { message: 'Opponent left the match.' });
+                const opponentId = m.playerA.id === socket.id ? m.playerB.id : m.playerA.id;
+                io.to(opponentId).emit('gameEnd', { message: 'Opponent left the match.' });
+                io.to(opponentId).emit('playerLeft', {
+                    socketId: socket.id,
+                    name: m.playerA.id === socket.id ? m.playerA.name : m.playerB.name,
+                });
             });
         }
 
