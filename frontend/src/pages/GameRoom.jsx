@@ -69,15 +69,15 @@ export function GameRoom() {
       console.log("[Socket] Disconnected");
     });
     
+
+
+    return () => socket.disconnect();
+  }, [roomId]);
 useEffect(() => {
   if (generatedRoomCode && !gameStarted) {
     setGameLog(prev => [...prev, `📢 Opponent provided room code: ${generatedRoomCode}`]);
   }
 }, [generatedRoomCode, gameStarted]);
-
-    return () => socket.disconnect();
-  }, [roomId]);
-
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
     setIsRedirecting(true);
