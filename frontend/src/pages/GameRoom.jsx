@@ -68,6 +68,12 @@ export function GameRoom() {
     socket.on("disconnect", () => {
       console.log("[Socket] Disconnected");
     });
+    
+useEffect(() => {
+  if (generatedRoomCode && !gameStarted) {
+    setGameLog(prev => [...prev, `📢 Opponent provided room code: ${generatedRoomCode}`]);
+  }
+}, [generatedRoomCode, gameStarted]);
 
     return () => socket.disconnect();
   }, [roomId]);
@@ -185,14 +191,23 @@ export function GameRoom() {
               <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
                 {/* Code Display */}
                 <div className="font-bold text-gray-600 mb-1 text-md text-center">Ludo Room Code</div>
-                <div className="font-mono text-2xl sm:text-3xl tracking-widest text-black mb-2 border px-4 py-2 rounded bg-gray-50 flex items-center justify-center gap-1 w-full max-w-xs">
-                  {generatedRoomCode || <span className="text-gray-400">Waiting for Ludo room code...</span>}
-                  {generatedRoomCode && (
-                    <button className="ml-2 text-blue-600 hover:text-blue-800 text-sm" title="Copy Room Code" onClick={handleCopyRoomCode}>
-                      📋
-                    </button>
-                  )}
-                </div>
+               <div className="font-mono text-2xl sm:text-3xl tracking-widest text-black mb-2 border px-4 py-2 rounded bg-gray-50 flex items-center justify-center gap-1 w-full max-w-xs">
+  {generatedRoomCode ? (
+    <>
+      <span>{generatedRoomCode}</span>
+      <button
+        className="ml-2 text-blue-600 hover:text-blue-800 text-sm"
+        title="Copy Room Code"
+        onClick={handleCopyRoomCode}
+      >
+        📋
+      </button>
+    </>
+  ) : (
+    <span className="text-gray-400">Waiting for Ludo room code...</span>
+  )}
+</div>
+
 
                 {/* Deep‑link / Join button */}
                 {generatedRoomCode && (

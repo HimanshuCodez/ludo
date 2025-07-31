@@ -27,7 +27,7 @@ export function Matchmaking() {
         return () => socket.disconnect();
     }, [navigate]);
 
-    // Challenge creator
+   
     const handleSet = () => {
         if (parseInt(amount) > 0) {
             setLoading(true);
@@ -35,7 +35,6 @@ export function Matchmaking() {
         }
     };
 
-    // Accept challenge
     const handlePlay = (challengeId) => {
         setLoading(true);
         socketRef.current.emit("challenge:accept", { challengeId }, () => setLoading(false));
