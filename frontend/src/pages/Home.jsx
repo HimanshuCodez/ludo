@@ -59,15 +59,12 @@ export function Home() {
               alt="Snake"
               className="w-full h-28 object-contain"
             />
-            <button
-              className="relative mt-4 ml-[25px]"
-              onClick={() => navigate("/Matchmaking")}
-            >
-              <img src={ribbonLogo} alt="Play" />
-              <div className="absolute top-0 left-6 bottom-1.5 text-center">
-                <p className="text-sm font-dashhorizon text-white">Play Now</p>
-              </div>
-            </button>
+           <button
+                className="mt-4 mx-auto block px-6 py-2 bg-gradient-to-r from-[#ff512f] to-[#dd2476] text-white font-bold text-sm rounded-full shadow-lg hover:scale-95 hover:shadow-pink-500/50 transition-transform duration-200"
+                onClick={() => navigate("/Matchmaking")}
+              >
+                🎮 Play Now
+              </button>
           </div>
 
           {/* Ludo 2 */}

@@ -4,7 +4,7 @@ import { Header } from '../Components/Header'
 import { Footer } from '../Components/Footer'
 import { useState } from 'react';
 
-
+//50rs - 25k
 export function AddCash() {
     const navigate = useNavigate();
 
@@ -22,7 +22,7 @@ export function AddCash() {
             </div>
             <div className='grid grid-cols-2 gap-4 mt-8'>
                 <div>
-                    <button className='bg-white font-roboto rounded-sm pt-6 pr-18 pl-3 w-full' style={{ fontSize: "34px" }}>₹250</button>
+                    <button className='bg-white font-roboto rounded-sm pt-6 pr-18 pl-3 w-full' style={{ fontSize: "34px" }}>₹50</button>
                 </div>
                 <div>
                     <button className='bg-white font-roboto rounded-sm pt-6 pr-18 w-full pl-3' style={{ fontSize: "34px" }}>₹500</button>
@@ -31,7 +31,7 @@ export function AddCash() {
                     <button className='bg-white font-roboto rounded-sm pt-6 pr-18 w-full pl-3' style={{ fontSize: "34px" }}>₹1000</button>
                 </div>
                 <div>
-                    <button className='bg-white font-roboto rounded-sm pt-6 pr-18 w-full pl-3' style={{ fontSize: "34px" }}>₹2000</button>
+                    <button className='bg-white font-roboto rounded-sm pt-6 pr-18 w-full pl-3' style={{ fontSize: "34px" }}>₹25000</button>
                 </div>
             </div>
             <div className='px-2 mt-4'>
