@@ -23,12 +23,32 @@ const generateQR = async (upiString) => {
 }
 
 app.post('/QR', async (req, res) => {
-    amount = parseInt(req.body.Amount);
-    const upiString = `upi://pay?pa=7378160677-2@axl&pn=Irfan&am=${amount}&cu=INR&tr=${orderId}`;
-    const QR = await generateQR(upiString);
-    return res.status(200).json({
-        qr: QR
-    })
-})
+  const amount = parseInt(req.body.Amount);
+  const userId = req.body.userId;
+  if (!userId || isNaN(amount) || amount < 250 || amount > 100000) {
+    return res.status(400).json({ error: 'Invalid user ID or amount (250-100000)' });
+  }
+
+  const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const upiString = `upi://pay?pa=7378160677-2@axl&pn=Irfan&am=${amount}&cu=INR&tr=${transactionId}`;
+  const qr = await generateQR(upiString);
+
+  const paymentRequest = {
+    transactionId,
+    userId,
+    amount,
+    status: 'pending',
+    screenshot: null,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  };
+
+  paymentRequests.push(paymentRequest);
+  await saveData(PAYMENTS_FILE_PATH, paymentRequest);
+
+  io.to(userId).emit('paymentRequestCreated', paymentRequest);
+
+  res.status(200).json({ qr, transactionId, expiresAt: paymentRequest.expiresAt });
+});
 
 app.listen(3000);

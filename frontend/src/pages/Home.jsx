@@ -68,7 +68,7 @@ export function Home() {
           </div>
 
           {/* Ludo 2 */}
-          <div className="rounded-xl p-3 bg-gradient-to-br from-purple-600 to-pink-500 hover:scale-105 transition-transform duration-200 shadow-lg">
+          <div className="rounded-xl p-3 bg-gradient-to-br from-purple-600 to-pink-500 hover:scale-95 transition-transform duration-200 shadow-lg">
             <h3 className="font-dashhorizon text-white text-lg mb-2">
               Super Ludo
             </h3>
@@ -84,7 +84,7 @@ export function Home() {
 
           {/* Support */}
           <div
-            className="rounded-xl p-3 bg-gradient-to-br from-gray-700 to-gray-900 hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer"
+            className="rounded-xl p-3 bg-gradient-to-br from-gray-700 to-gray-900 hover:scale-95 transition-transform duration-200 shadow-lg cursor-pointer"
             onClick={() => navigate("/Support")}
           >
             <img src={WALogo} alt="Support" className="mx-auto mt-3 h-[70px]" />

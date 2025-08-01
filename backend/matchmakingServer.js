@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 
 // Set up multer for screenshot uploads
 const storage = multer.diskStorage({
-  destination: './uploads/',
+  destination: './Uploads/',
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
@@ -32,7 +32,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Create uploads directory
-fs.mkdir('./uploads/', { recursive: true }).catch(console.error);
+fs.mkdir('./Uploads/', { recursive: true }).catch(console.error);
 
 const MATCHES_FILE_PATH = path.join(__dirname, 'matches.json');
 const PAYMENTS_FILE_PATH = path.join(__dirname, 'payments.json');
@@ -76,6 +76,18 @@ async function saveData(filePath, data) {
 
 loadData();
 
+// Initialize dummy chips for testing
+app.post('/initializeDummyChips', async (req, res) => {
+  const { userId, chips } = req.body;
+  if (!userId || isNaN(chips) || chips < 0) {
+    return res.status(400).json({ error: 'Invalid user ID or chip amount' });
+  }
+  wallets[userId] = (wallets[userId] || 0) + parseInt(chips);
+  await saveData(WALLETS_FILE_PATH, wallets);
+  io.to(userId).emit('walletUpdated', { balance: wallets[userId] });
+  res.status(200).json({ message: 'Dummy chips added', balance: wallets[userId] });
+});
+
 // QR Code Generation
 const generateQR = async (upiString) => {
   try {
@@ -89,9 +101,9 @@ const generateQR = async (upiString) => {
 // Generate QR Code and Payment Request
 app.post('/QR', async (req, res) => {
   const amount = parseInt(req.body.Amount);
-  const userId = req.body.userId; // Use socket.id or authenticated user ID
-  if (!userId || isNaN(amount) || amount < 250 || amount > 100000) {
-    return res.status(400).json({ error: 'Invalid user ID or amount (250-100000)' });
+  const userId = req.body.userId;
+  if (!userId || isNaN(amount) || amount < 50 || amount > 100000) {
+    return res.status(400).json({ error: 'Invalid user ID or amount (50-100000)' });
   }
 
   const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -105,7 +117,7 @@ app.post('/QR', async (req, res) => {
     status: 'pending',
     screenshot: null,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5-minute timer
+    expiresAt: Date.now() + 5 * 60 * 1000,
   };
 
   paymentRequests.push(paymentRequest);
@@ -183,6 +195,7 @@ io.on('connection', (socket) => {
 
   socket.emit('updateChallenges', getClientChallenges(socket.id));
   socket.emit('updateMatches', getClientMatches());
+  socket.emit('walletUpdated', { balance: wallets[socket.id] || 0 });
 
   socket.on('challenge:create', async (data, ack) => {
     const balance = wallets[socket.id] || 0;
