@@ -5,7 +5,7 @@ import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
 
 export function Matchmaking() {
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(5000);
   const [challenges, setChallenges] = useState([]);
   const [matches, setMatches] = useState([]);
   const [myChallengeId, setMyChallengeId] = useState(null);
@@ -73,21 +73,35 @@ export function Matchmaking() {
       socket.off("reconnect");
     };
   }, [navigate]);
+const handleSet = () => {
+  if (parseInt(amount) > 0) {
+    setLoading(true);
+    console.log(`[Client] Creating challenge for ₹${amount}`);
+    socketRef.current.emit("challenge:create", { amount }, (success) => {
+      setLoading(false);
+      if (!success) {
+        alert("Failed to create challenge.");
+      }
+    });
+  } else {
+    alert("Please enter a valid amount.");
+  }
+};
 
-  const handleSet = () => {
-    if (parseInt(amount) > 0) {
-      setLoading(true);
-      console.log(`[Client] Creating challenge for ₹${amount}`);
-      socketRef.current.emit("challenge:create", { amount }, (success) => {
-        setLoading(false);
-        if (!success) {
-          alert("Failed to create challenge.");
-        }
-      });
-    } else {
-      alert("Please enter a valid amount.");
-    }
-  };
+  // const handleSet = () => {
+  //   if (parseInt(amount) > 0) {
+  //     setLoading(true);
+  //     console.log(`[Client] Creating challenge for ₹${amount}`);
+  //     socketRef.current.emit("challenge:create", { amount }, (success) => {
+  //       setLoading(false);
+  //       if (!success) {
+  //         alert("Failed to create challenge.");
+  //       }
+  //     });
+  //   } else {
+  //     alert("Please enter a valid amount.");
+  //   }
+  // };
 
   const handlePlay = (challengeId) => {
     setLoading(true);

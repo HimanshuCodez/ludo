@@ -197,87 +197,153 @@ io.on('connection', (socket) => {
   socket.emit('updateMatches', getClientMatches());
   socket.emit('walletUpdated', { balance: wallets[socket.id] || 0 });
 
-  socket.on('challenge:create', async (data, ack) => {
-    const balance = wallets[socket.id] || 0;
-    const amount = parseInt(data.amount);
+  // socket.on('challenge:create', async (data, ack) => {
+  //   const balance = wallets[socket.id] || 0;
+  //   const amount = parseInt(data.amount);
 
-    if (balance < amount) {
-      socket.emit('error', { message: 'Insufficient wallet balance.' });
-      if (ack) ack(false);
-      return;
-    }
+  //   if (balance < amount) {
+  //     socket.emit('error', { message: 'Insufficient wallet balance.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
 
-    if (challenges.find((c) => c.createdBy === socket.id)) {
-      socket.emit('error', { message: 'You already have an active challenge.' });
-      if (ack) ack(false);
-      return;
-    }
+  //   if (challenges.find((c) => c.createdBy === socket.id)) {
+  //     socket.emit('error', { message: 'You already have an active challenge.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
 
-    if (isNaN(amount) || amount <= 0) {
-      socket.emit('error', { message: 'Invalid challenge amount.' });
-      if (ack) ack(false);
-      return;
-    }
+  //   if (isNaN(amount) || amount <= 0) {
+  //     socket.emit('error', { message: 'Invalid challenge amount.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
 
-    const name = data.name || `Player_${socket.id.substring(0, 4)}`;
-    const challenge = {
-      id: `challenge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name,
-      amount,
-      createdBy: socket.id,
-    };
+  //   const name = data.name || `Player_${socket.id.substring(0, 4)}`;
+  //   const challenge = {
+  //     id: `challenge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  //     name,
+  //     amount,
+  //     createdBy: socket.id,
+  //   };
 
-    challenges.push(challenge);
-    socket.emit('yourChallengeId', challenge.id);
-    updateAllQueues();
-    console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
-    if (ack) ack(true);
-  });
+  //   challenges.push(challenge);
+  //   socket.emit('yourChallengeId', challenge.id);
+  //   updateAllQueues();
+  //   console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
+  //   if (ack) ack(true);
+  // });
+socket.on('challenge:create', async (data, ack) => {
+  const amount = parseInt(data.amount);
 
-  socket.on('challenge:accept', async (data, ack) => {
-    const challenge = challenges.find((c) => c.id === data.challengeId);
-    if (!challenge) {
-      socket.emit('error', { message: 'Challenge not found.' });
-      if (ack) ack(false);
-      return;
-    }
-    if (challenge.createdBy === socket.id) {
-      socket.emit('error', { message: 'Cannot accept your own challenge.' });
-      if (ack) ack(false);
-      return;
-    }
+  if (isNaN(amount) || amount <= 0) {
+    socket.emit('error', { message: 'Invalid challenge amount.' });
+    if (ack) ack(false);
+    return;
+  }
 
-    const balance = wallets[socket.id] || 0;
-    if (balance < challenge.amount) {
-      socket.emit('error', { message: 'Insufficient wallet balance.' });
-      if (ack) ack(false);
-      return;
-    }
+  if (challenges.find((c) => c.createdBy === socket.id)) {
+    socket.emit('error', { message: 'You already have an active challenge.' });
+    if (ack) ack(false);
+    return;
+  }
 
-    challenges = challenges.filter((c) => c.id !== data.challengeId);
+  const name = data.name || `Player_${socket.id.substring(0, 4)}`;
+  const challenge = {
+    id: `challenge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    amount,
+    createdBy: socket.id,
+  };
 
-    const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
-    const matchId = `match-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  challenges.push(challenge);
+  socket.emit('yourChallengeId', challenge.id);
+  updateAllQueues();
+  console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
+  if (ack) ack(true);
+});
 
-    const match = {
-      id: matchId,
-      playerA: { id: challenge.createdBy, name: challenge.name },
-      playerB: { id: socket.id, name: playerBName },
-      amount: challenge.amount,
-      generatedRoomCode: '',
-      roomCodeProvider: null,
-      playerResults: {},
-    };
+  // socket.on('challenge:accept', async (data, ack) => {
+  //   const challenge = challenges.find((c) => c.id === data.challengeId);
+  //   if (!challenge) {
+  //     socket.emit('error', { message: 'Challenge not found.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
+  //   if (challenge.createdBy === socket.id) {
+  //     socket.emit('error', { message: 'Cannot accept your own challenge.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
 
-    matches.push(match);
-    await saveData(MATCHES_FILE_PATH, matches);
-    updateAllQueues();
+  //   const balance = wallets[socket.id] || 0;
+  //   if (balance < challenge.amount) {
+  //     socket.emit('error', { message: 'Insufficient wallet balance.' });
+  //     if (ack) ack(false);
+  //     return;
+  //   }
 
-    io.to(challenge.createdBy).emit('matchConfirmed', { roomId: match.id });
-    io.to(socket.id).emit('matchConfirmed', { roomId: match.id });
-    console.log(`[Server] Match created: ${match.id}`);
-    if (ack) ack(true);
-  });
+  //   challenges = challenges.filter((c) => c.id !== data.challengeId);
+
+  //   const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
+  //   const matchId = `match-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  //   const match = {
+  //     id: matchId,
+  //     playerA: { id: challenge.createdBy, name: challenge.name },
+  //     playerB: { id: socket.id, name: playerBName },
+  //     amount: challenge.amount,
+  //     generatedRoomCode: '',
+  //     roomCodeProvider: null,
+  //     playerResults: {},
+  //   };
+
+  //   matches.push(match);
+  //   await saveData(MATCHES_FILE_PATH, matches);
+  //   updateAllQueues();
+
+  //   io.to(challenge.createdBy).emit('matchConfirmed', { roomId: match.id });
+  //   io.to(socket.id).emit('matchConfirmed', { roomId: match.id });
+  //   console.log(`[Server] Match created: ${match.id}`);
+  //   if (ack) ack(true);
+  // });
+socket.on('challenge:accept', async (data, ack) => {
+  const challenge = challenges.find((c) => c.id === data.challengeId);
+  if (!challenge) {
+    socket.emit('error', { message: 'Challenge not found.' });
+    if (ack) ack(false);
+    return;
+  }
+  if (challenge.createdBy === socket.id) {
+    socket.emit('error', { message: 'Cannot accept your own challenge.' });
+    if (ack) ack(false);
+    return;
+  }
+
+  challenges = challenges.filter((c) => c.id !== data.challengeId);
+
+  const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
+  const matchId = `match-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  const match = {
+    id: matchId,
+    playerA: { id: challenge.createdBy, name: challenge.name },
+    playerB: { id: socket.id, name: playerBName },
+    amount: challenge.amount,
+    generatedRoomCode: '',
+    roomCodeProvider: null,
+    playerResults: {},
+  };
+
+  matches.push(match);
+  await saveData(MATCHES_FILE_PATH, matches);
+  updateAllQueues();
+
+  io.to(challenge.createdBy).emit('matchConfirmed', { roomId: match.id });
+  io.to(socket.id).emit('matchConfirmed', { roomId: match.id });
+  console.log(`[Server] Match created: ${match.id}`);
+  if (ack) ack(true);
+});
 
   socket.on('joinRoom', async ({ roomId, userName }) => {
     const match = matches.find((m) => m.id === roomId);
