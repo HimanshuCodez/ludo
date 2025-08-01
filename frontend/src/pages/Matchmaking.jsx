@@ -62,7 +62,7 @@ export function Matchmaking() {
     });
 
     return () => {
-      // Remove socket.disconnect() to persist connection
+     
       socket.off("connect");
       socket.off("updateChallenges");
       socket.off("updateMatches");

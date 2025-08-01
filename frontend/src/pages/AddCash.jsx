@@ -38,7 +38,7 @@ export function AddCash() {
               placeholder="Enter Amount"
             />
           </div>
-          <div className="text-white text-[14px] mt-2">Min:250, Max:100000</div>
+          <div className="text-white text-[14px] mt-2">Min: 50, Max: 10000</div>
         </div>
         <div className="grid grid-cols-2 gap-4 mt-8">
           <button
