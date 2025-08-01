@@ -1,62 +1,109 @@
-import ludoLogo from '../assets/ludo.png'
-import ribbonLogo from '../assets/ribbon.png'
-import snakeLogo from '../assets/snake.png'
-import WALogo from '../assets/WA.png'
-import ludo2Logo from '../assets/ludo2.png'
-import { useNavigate } from 'react-router-dom'
-import { Header } from '../Components/Header'
-import { Footer } from '../Components/Footer'
+import ludoLogo from "../assets/ludo.png";
+import ribbonLogo from "../assets/ribbon.png";
+import snakeLogo from "../assets/snake.png";
+import WALogo from "../assets/WA.png";
+import ludo2Logo from "../assets/ludo2.png";
+import { useNavigate } from "react-router-dom";
+import { Header } from "../Components/Header";
+import { Footer } from "../Components/Footer";
+import { Link } from "react-router-dom";
 
 export function Home() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    return <div>
-        <Header></Header>
-        {/* blue portion */}
-        <div className='py-5 px-4'>
-            {/* black text parent */}
-            <div className='bg-black text-white text-[10px] p-[5px]'>🚫Note🚫👉 Please जिस टाइम में जो UPI & Account number लगे हो उसी पर पेमेंट करें अन्यथा डिपॉजिट ऐड नहीं होगा। withdrawal की कोई समस्या नहीं है 🚫 Note 👉Withdrawal 24*7 available Thankyou 🙏🙏🥰</div>
-            {/* Tournaments parent */}
-            <div className='mt-2'>
-                <div className='text-white font-roboto mb-[10px]' style={{ fontSize: "18px" }}>Our Tournaments</div>
-                <div className='grid grid-cols-2 place-content-between gap-5'>
-                    <div className='bg-black-ka-bhai rounded-md px-1.5 pb-3.5 pt-2'>
-                        <div className='font-dashhorizon text-white ml-0.5' style={{ fontSize: '18px' }}>Life Ludo</div>
-                        <img src={ludoLogo} alt="" className='' />
-                        <button className="relative text-center mt-3 ml-[25px]" onClick={() => { navigate('/Matchmaking') }}>
-                            <img src={ribbonLogo} alt="img" />
-                            <div className="absolute top-0 left-6 bottom-1.5 text-center">
-                                <p className="text-sm text-center font-dashhorizon text-white font-light">
-                                    Play Now
-                                </p>
-                            </div>
-                        </button>
-                    </div>
-                    <div className='bg-black-ka-bhai rounded-md px-1.5 pb-3.5 pt-2'>
-                        <div className='font-dashhorizon text-white ml-0.5' style={{ fontSize: '18px' }}>Life Ludo</div>
-                        <img src={snakeLogo} alt="" className='' />
-                        <button className="relative text-center mt-3 ml-[25px]" onClick={() => { navigate('/Matchmaking') }}>
-                            <img src={ribbonLogo} alt="img" />
-                            <div className="absolute top-0 left-6 bottom-1.5 text-center">
-                                <p className="text-sm text-center font-dashhorizon text-white font-light">
-                                    Play Now
-                                </p>
-                            </div>
-                        </button>
-                    </div>
-                    <div className='bg-black-ka-bhai rounded-md px-1.5 pb-3.5  pt-2'>
-                        <div className='font-dashhorizon text-white ml-0.5' style={{ fontSize: '18px' }}>Life Ludo</div>
-                        <img src={ludo2Logo} alt="" className='h-[108px] w-[191px]' />
-                        <p className='font-bold font-roboto text-white mt-[7px] ml-[26px] text-[26px]'>Life Ludo</p>
-                    </div>
-                    <div className='bg-black-ka-bhai rounded-md px-1.5 pb-3.5 pt-2' onClick={() => navigate('/Support')}>
-                        <img src={WALogo} alt="" className='ml-[27px] mt-[29px]' />
-                        <p className='font-bold font-roboto text-white mt-[7px] ml-[26px] text-[26px]'>Support</p>
-                    </div>
-                </div>
+  return (
+    <div className="bg-[#0e0e0e] min-h-screen">
+      <Header />
+
+      {/* Notice Bar */}
+      <div className="bg-black text-white text-[10px] p-2 text-center font-medium">
+        🚫 Note 🚫 👉 Please जिस टाइम में जो UPI & Account number लगे हो उसी पर
+        पेमेंट करें अन्यथा डिपॉजिट ऐड नहीं होगा। Withdrawal की कोई समस्या नहीं
+        है 🚫 Note 👉 Withdrawal 24*7 available. Thank you 🙏🙏🥰
+      </div>
+
+      {/* Tournaments */}
+      <div className="py-6 px-4">
+        <h2 className="text-white text-2xl font-bold font-roboto mb-4">
+          🔥 Our Tournaments
+        </h2>
+
+        <div className="grid grid-cols-2 gap-5">
+          {/* Life Ludo 1 */}
+          <Link to="/Matchmaking">
+            <div className="rounded-xl p-3 bg-gradient-to-br from-yellow-500 to-red-500 hover:scale-95 transition-transform duration-200 shadow-lg">
+              <h3 className="font-dashhorizon text-white text-lg mb-2">
+                Life Ludo
+              </h3>
+              <img
+                src={ludoLogo}
+                alt="Life Ludo"
+                className="w-full h-28 object-contain"
+              />
+              <button
+                className="mt-4 mx-auto block px-6 py-2 bg-gradient-to-r from-[#ff512f] to-[#dd2476] text-white font-bold text-sm rounded-full shadow-lg hover:scale-95 hover:shadow-pink-500/50 transition-transform duration-200"
+                onClick={() => navigate("/Matchmaking")}
+              >
+                🎮 Play Now
+              </button>
             </div>
-            <button className='text-center bg-download text-white font-semibold font-roboto text-[26px] py-[4px] mt-[21px] mb-[20px] w-full'>Download App</button>
+          </Link>
+
+          {/* Snake Game */}
+          <div className="rounded-xl p-3 bg-gradient-to-br from-green-500 to-blue-600 hover:scale-95 transition-transform duration-200 shadow-lg">
+            <h3 className="font-dashhorizon text-white text-lg mb-2">
+              Snake Game
+            </h3>
+            <img
+              src={snakeLogo}
+              alt="Snake"
+              className="w-full h-28 object-contain"
+            />
+            <button
+              className="relative mt-4 ml-[25px]"
+              onClick={() => navigate("/Matchmaking")}
+            >
+              <img src={ribbonLogo} alt="Play" />
+              <div className="absolute top-0 left-6 bottom-1.5 text-center">
+                <p className="text-sm font-dashhorizon text-white">Play Now</p>
+              </div>
+            </button>
+          </div>
+
+          {/* Ludo 2 */}
+          <div className="rounded-xl p-3 bg-gradient-to-br from-purple-600 to-pink-500 hover:scale-105 transition-transform duration-200 shadow-lg">
+            <h3 className="font-dashhorizon text-white text-lg mb-2">
+              Super Ludo
+            </h3>
+            <img
+              src={ludo2Logo}
+              alt="Ludo2"
+              className="h-[108px] w-full object-contain"
+            />
+            <p className="font-bold font-roboto text-white text-center mt-2 text-xl">
+              Life Ludo
+            </p>
+          </div>
+
+          {/* Support */}
+          <div
+            className="rounded-xl p-3 bg-gradient-to-br from-gray-700 to-gray-900 hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer"
+            onClick={() => navigate("/Support")}
+          >
+            <img src={WALogo} alt="Support" className="mx-auto mt-3 h-[70px]" />
+            <p className="font-bold font-roboto text-white text-center mt-2 text-xl">
+              Support
+            </p>
+          </div>
         </div>
-        <Footer></Footer>
+
+        {/* Download App CTA */}
+        <button className="mt-6 mb-6 w-full py-3 text-white bg-gradient-to-r from-yellow-500 to-orange-500 text-2xl font-bold rounded-md shadow-xl hover:scale-[1.02] transition-transform">
+          📥 Download App
+        </button>
+      </div>
+
+      <Footer />
     </div>
+  );
 }

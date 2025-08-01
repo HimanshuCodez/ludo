@@ -20,7 +20,6 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
-
 app.get('/', (req, res) => {
   res.send('Ludo Challenge Pool Server is Running!');
 });
@@ -250,7 +249,6 @@ io.on('connection', (socket) => {
     }));
   }
 });
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT);
