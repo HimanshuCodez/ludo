@@ -4,9 +4,29 @@ import arrowL from '../assets/arrowL.png';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
+import { useEffect, useState } from 'react';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export function MyWallet() {
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const [depositChips, setDepositChips] = useState(0);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      if (user) {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setDepositChips(parseFloat(userSnap.data().depositChips) || 0);
+        }
+      }
+    };
+    fetchWallet();
+  }, [user]);
 
   return (
     <div className="font-roboto min-h-screen bg-gradient-to-br from-yellow-50 via-red-50 to-green-100">
@@ -30,7 +50,6 @@ export function MyWallet() {
 
       {/* Wallet Sections */}
       <div className="mx-4 mt-4 space-y-4">
-
         {/* Deposit Chips */}
         <div className="rounded-xl overflow-hidden shadow-md bg-white">
           <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center py-1 font-semibold">
@@ -44,7 +63,7 @@ export function MyWallet() {
               <img src={rupeeLogo} alt="" className="w-6 h-6 mx-auto" />
               <div className="flex justify-center items-center gap-1 text-xl font-bold">
                 <img src={rupee2Logo} alt="" className="w-4 h-4" />
-                <span>0</span>
+                <span>{depositChips.toFixed(2)}</span>
               </div>
               <div className="text-gray-600 text-sm">Chips</div>
             </div>
@@ -57,10 +76,10 @@ export function MyWallet() {
           </button>
         </div>
 
-        {/* Winning Chips */}
+        {/* Winning Chips (Static for now) */}
         <div className="rounded-xl overflow-hidden shadow-md bg-white">
           <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-center py-1 font-semibold">
-            Winning Chips
+            Winning Money
           </div>
           <div className="bg-red-50 text-[11px] text-center text-red-600 px-2 py-1">
             यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते हैं, बैंक या UPI से निकाला नहीं जा सकता है।
@@ -72,7 +91,7 @@ export function MyWallet() {
                 <img src={rupee2Logo} alt="" className="w-4 h-4" />
                 <span>0</span>
               </div>
-              <div className="text-gray-600 text-sm">Chips</div>
+              <div className="text-gray-600 text-sm">Money</div>
             </div>
           </div>
           <button

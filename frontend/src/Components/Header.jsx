@@ -8,7 +8,7 @@ export function Header() {
 
     return <div>
         <div className='bg-primary px-4 flex items-center justify-between' style={{ paddingTop: "10px", height: "80px" }}>
-            <button className='font-dashhorizon text-[26px] mt-3' onClick={() => navigate('/')}>
+            <button className='font-dashhorizon text-[26px] mt-3' onClick={() => navigate('/home')}>
                 <span className='text-L'>L</span>
                 <span className='text-black'>i</span>
                 <span className='text-f-d'>f</span>

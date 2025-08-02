@@ -1,17 +1,24 @@
+
 import { useEffect, useState } from 'react';
 import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import axios from 'axios';
 
 export function Pay() {
-  const [qr, setQr] = useState('');
-  const [amount] = useState(window.localStorage.getItem('Amount'));
+  const [amount, setAmount] = useState(window.localStorage.getItem('Amount') || '');
+  const [upiId, setUpiId] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [transactionId, setTransactionId] = useState('');
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser;
 
   // Timer countdown
   useEffect(() => {
@@ -33,51 +40,66 @@ export function Pay() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // Generate QR code using reliable API
-  useEffect(() => {
-    if (!amount || isNaN(amount) || amount < 250 || amount > 100000) {
-      setError('Invalid amount. Please select an amount between ₹250 and ₹100000.');
-      setLoading(false);
-      navigate('/AddCash');
+  // Initiate payment request
+  const initiatePayment = () => {
+    if (!user) {
+      setError('Please log in to proceed with payment.');
       return;
     }
 
-    const upiLink = `upi://pay?pa=7378160677-2@axl&pn=TrueWinCircle&am=${amount}&cu=INR`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-      upiLink
-    )}&size=300x300`;
-
-    setQr(qrUrl);
-    setLoading(false);
-  }, [amount, navigate]);
-
-  // Handle screenshot upload
-  const handleScreenshotUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) {
-      setError('Please select a screenshot.');
+    const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || isNaN(parsedAmount) || parsedAmount < 250 || parsedAmount > 100000) {
+      setError('Invalid amount. Please enter an amount between ₹250 and ₹100000.');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('screenshot', file);
-    formData.append('amount', amount);
+    if (!upiId || !upiId.includes('@')) {
+      setError('Please enter a valid UPI ID (e.g., example@bank).');
+      return;
+    }
 
     setLoading(true);
-    axios
-      .post('https://8f54vp0d-5000.inc1.devtunnels.ms/uploadScreenshot', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      .then(() => {
-        setPaymentStatus('awaiting_verification');
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err.response?.data?.error || 'Failed to upload screenshot. Please try again.'
-        );
-        setLoading(false);
-      });
+    setError('');
+    const upiLink = `upi://pay?pa=${upiId}&pn=TrueWinCircle&am=${parsedAmount}&cu=INR&tr=${Date.now()}`;
+    setTransactionId(Date.now().toString());
+    window.location.href = upiLink; // Opens UPI app for payment
+    setLoading(false);
+  };
+
+  // Verify payment
+  const verifyPayment = async () => {
+    if (!transactionId) {
+      setError('Transaction ID not found.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        'https://8f54vp0d-5000.inc1.devtunnels.ms/verifyPayment',
+        {
+          transactionId,
+          amount: parseFloat(amount),
+          phone: user.phoneNumber,
+        }
+      );
+      if (response.data.success) {
+        // Update Firestore wallet
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          depositChips: parseFloat(amount) + (parseFloat(await (await userRef.get()).data()?.depositChips) || 0),
+          updatedAt: new Date().toISOString(),
+        });
+        setPaymentStatus('completed');
+        navigate('/mywallet');
+      } else {
+        setError('Payment verification failed. Please try again.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to verify payment.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,46 +108,57 @@ export function Pay() {
       <div className="p-6 md:p-10 text-white flex flex-col items-center">
         <h1 className="text-4xl font-bold text-center mb-6 drop-shadow-md">Pay Now</h1>
 
-        {loading && <div className="text-lg text-center animate-pulse">Generating QR code...</div>}
+        {loading && <div className="text-lg text-center animate-pulse">Processing payment...</div>}
 
         {error && <div className="text-red-500 text-center mb-4 text-lg">{error}</div>}
 
-        {!loading && qr && paymentStatus !== 'expired' && (
-          <div className=" bg-opacity-5 rounded-xl shadow-xl p-6 flex flex-col items-center w-full max-w-md">
-            <img
-              src={qr}
-              className="w-64 h-64 mb-4 border-4 border-white rounded-xl shadow-lg"
-              alt="UPI QR Code"
+        {!loading && paymentStatus === 'pending' && (
+          <div className="bg-opacity-5 rounded-xl shadow-xl p-6 flex flex-col items-center w-full max-w-md">
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter amount (₹250-₹100000)"
+              className="w-full mb-3 p-2 rounded bg-gray-800 text-white border border-gray-700"
             />
-            <p className="text-lg text-center mb-3">
-              Scan to pay <span className="font-bold">₹{amount}</span> to{' '}
-              <span className="font-semibold text-green-300">7378160677-2@axl</span> using
-              GPay, PhonePe, etc.
-            </p>
-            <p className="text-lg font-mono mb-5 text-yellow-300">
-              ⏳ Time Left:{' '}
-              <span className="font-bold text-white">
-                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-              </span>
-            </p>
-
-            {paymentStatus === 'pending' && (
-              <div className="w-full text-center">
-                <label className="text-lg mb-2 block">Upload Payment Screenshot:</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleScreenshotUpload}
-                  className="bg-white text-black p-2 rounded-md w-full max-w-xs mx-auto text-sm"
-                />
-              </div>
+            <input
+              type="text"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
+              placeholder="Enter UPI ID (e.g., example@bank)"
+              className="w-full mb-3 p-2 rounded bg-gray-800 text-white border border-gray-700"
+            />
+            <button
+              onClick={initiatePayment}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold transition duration-300"
+            >
+              Pay Now
+            </button>
+            {transactionId && (
+              <>
+                <p className="text-lg text-center mb-3 mt-4">
+                  A payment request of <span className="font-bold">₹{amount}</span> has been sent. Complete the payment in your UPI app.
+                </p>
+                <p className="text-lg font-mono mb-5 text-yellow-300">
+                  ⏳ Time Left:{' '}
+                  <span className="font-bold text-white">
+                    {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                  </span>
+                </p>
+                <button
+                  onClick={verifyPayment}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold transition duration-300"
+                >
+                  Confirm Payment
+                </button>
+              </>
             )}
+          </div>
+        )}
 
-            {paymentStatus === 'awaiting_verification' && (
-              <div className="text-yellow-400 text-lg text-center mt-4 animate-pulse">
-                Awaiting admin verification...
-              </div>
-            )}
+        {paymentStatus === 'completed' && (
+          <div className="text-green-500 text-lg text-center mt-6">
+            ✅ Payment successful! Redirecting to wallet...
           </div>
         )}
 
