@@ -118,8 +118,6 @@ const AuthPage = () => {
       </div>
 
       <div id="recaptcha-container"></div>
-
-      <div className="absolute bottom-4 text-sm text-gray-500">🛡️ Secure OTP Verification Powered by Firebase</div>
     </div>
   );
 };
