@@ -22,9 +22,9 @@ function App() {
     <div>
       <BrowserRouter>
         <Routes>
-          <Route path='/' element={<AuthPage />} />
+          {/* <Route path='/' element={<AuthPage />} /> */}
            
-        <Route path="/home" element={<Home />} />
+        <Route path="/" element={<Home />} />
           <Route path='/Profile' element={<Profile />} />
           <Route path='/AddCash' element={<AddCash />} />
           <Route path='/Refer' element={<Refer />} />
