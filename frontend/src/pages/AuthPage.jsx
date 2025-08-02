@@ -1,8 +1,8 @@
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase"; // ← Import Firestore instance
-import { doc, setDoc, getDoc } from "firebase/firestore"; // ← Firestore methods
+import { db } from "../firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 export default function AuthPage() {
   const [phone, setPhone] = useState('');
@@ -11,16 +11,26 @@ export default function AuthPage() {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
 
-  const setupRecaptcha = () => {
+  useEffect(() => {
     const auth = getAuth();
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {}
-    });
-  };
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => console.log('reCAPTCHA solved'),
+      });
+    }
+
+    let timer;
+    if (confirmationResult) {
+      timer = setTimeout(() => {
+        setConfirmationResult(null);
+        alert("OTP session expired. Request a new OTP.");
+      }, 120000); // 2 minutes timeout
+    }
+    return () => clearTimeout(timer);
+  }, [confirmationResult]);
 
   const sendOTP = async () => {
-    setupRecaptcha();
     const auth = getAuth();
     const appVerifier = window.recaptchaVerifier;
     const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
@@ -28,6 +38,7 @@ export default function AuthPage() {
     try {
       const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
       setConfirmationResult(result);
+      console.log("Confirmation Result:", result);
       alert('OTP sent');
     } catch (error) {
       console.error('OTP Error', error);
@@ -36,11 +47,21 @@ export default function AuthPage() {
   };
 
   const verifyOTP = async () => {
+    if (!confirmationResult) {
+      alert("Please request a new OTP first.");
+      return;
+    }
+    if (!otp || otp.length !== 6 || isNaN(otp)) {
+      alert("Please enter a valid 6-digit OTP");
+      return;
+    }
     try {
+      console.log("Verifying OTP:", otp);
       const result = await confirmationResult.confirm(otp);
+      console.log("Verification Result:", result);
       const user = result.user;
+      console.log("Authenticated User:", user.uid, user.phoneNumber);
 
-      // Save user to Firestore
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
@@ -57,7 +78,14 @@ export default function AuthPage() {
       navigate('/home');
     } catch (error) {
       console.error("OTP verification failed", error);
-      alert("Invalid OTP");
+      if (error.code === "auth/invalid-verification-code" || error.code === "auth/code-expired") {
+        alert("Invalid or expired OTP. Please request a new OTP.");
+        setConfirmationResult(null);
+      } else if (error.code === "permission-denied") {
+        alert("Error: Missing or insufficient permissions. Check Firestore rules.");
+      } else {
+        alert("Invalid OTP: " + error.message);
+      }
     }
   };
 
