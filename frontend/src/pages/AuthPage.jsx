@@ -1,19 +1,21 @@
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { db } from "../firebase"; // ← Import Firestore instance
+import { doc, setDoc, getDoc } from "firebase/firestore"; // ← Firestore methods
 
 export default function AuthPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [referral, setReferral] = useState('');
   const [confirmationResult, setConfirmationResult] = useState(null);
+  const navigate = useNavigate();
 
   const setupRecaptcha = () => {
     const auth = getAuth();
     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response) => {
-        // reCAPTCHA solved
-      }
+      size: 'invisible',
+      callback: () => {}
     });
   };
 
@@ -35,9 +37,26 @@ export default function AuthPage() {
 
   const verifyOTP = async () => {
     try {
-      await confirmationResult.confirm(otp);
+      const result = await confirmationResult.confirm(otp);
+      const user = result.user;
+
+      // Save user to Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          phoneNumber: user.phoneNumber,
+          referral: referral || null,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       alert("Phone number verified!");
+      navigate('/home');
     } catch (error) {
+      console.error("OTP verification failed", error);
       alert("Invalid OTP");
     }
   };
