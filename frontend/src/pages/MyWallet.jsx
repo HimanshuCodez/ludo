@@ -1,65 +1,90 @@
-import rupeeLogo from '../assets/rupee.png'
-import rupee2Logo from '../assets/rupee2.png'
-import arrowL from '../assets/arrowL.png'
-import { useNavigate } from 'react-router-dom'
-import { Header } from '../Components/Header'
-import { Footer } from '../Components/Footer'
-import { useState } from 'react'
-
+import rupeeLogo from '../assets/rupee.png';
+import rupee2Logo from '../assets/rupee2.png';
+import arrowL from '../assets/arrowL.png';
+import { useNavigate } from 'react-router-dom';
+import { Header } from '../Components/Header';
+import { Footer } from '../Components/Footer';
 
 export function MyWallet() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    return <div>
-        <Header></Header>
-        <div className='px-4 pb-4 pt-1 font-roboto'>
-            <div className='p-2 flex items-center justify-between'>
-                <button onClick={() => navigate('/')} className=""><img src={arrowL} alt="Close Menu" className="w-9 h-8 bg-primary rounded-4xl" /></button>
-                <button className='bg-primary p-2 rounded-xl'>Wallet History</button>
+  return (
+    <div className="font-roboto min-h-screen bg-gradient-to-br from-yellow-50 via-red-50 to-green-100">
+      <Header />
+
+      {/* Back & Wallet History */}
+      <div className="px-4 pt-2 pb-1 flex items-center justify-between">
+        <button onClick={() => navigate('/')} className="rounded-full bg-primary p-1">
+          <img src={arrowL} alt="Back" className="w-8 h-8" />
+        </button>
+        <button className="bg-gradient-to-r from-yellow-400 to-red-400 text-white font-semibold px-4 py-1 rounded-lg shadow">
+          Wallet History
+        </button>
+      </div>
+
+      {/* Verified Status */}
+      <div className="mx-4 bg-gradient-to-r from-green-200 to-green-400 rounded-md px-4 py-2 flex justify-between items-center text-sm font-medium text-green-900 shadow-sm">
+        <span>✔ Verified</span>
+        <span className="bg-green-700 text-white text-xs px-2 py-1 rounded">Verification Completed</span>
+      </div>
+
+      {/* Wallet Sections */}
+      <div className="mx-4 mt-4 space-y-4">
+
+        {/* Deposit Chips */}
+        <div className="rounded-xl overflow-hidden shadow-md bg-white">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center py-1 font-semibold">
+            Deposit Chips
+          </div>
+          <div className="bg-blue-50 text-[11px] text-center text-blue-600 px-2 py-1">
+            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते हैं, बैंक या UPI से निकाला नहीं जा सकता है।
+          </div>
+          <div className="flex justify-center py-4 bg-gradient-to-br from-yellow-200 to-red-200">
+            <div className="bg-white rounded-lg px-6 py-3 shadow text-center space-y-1">
+              <img src={rupeeLogo} alt="" className="w-6 h-6 mx-auto" />
+              <div className="flex justify-center items-center gap-1 text-xl font-bold">
+                <img src={rupee2Logo} alt="" className="w-4 h-4" />
+                <span>0</span>
+              </div>
+              <div className="text-gray-600 text-sm">Chips</div>
             </div>
-            <div className='px-4 flex items-center justify-between mt-1 bg-coin py-2 text-[16px] rounded-sm'>
-                <div className=''>Verified</div>
-                <div className='text-white bg-black p-[6px] rounded-sm'>Verification Completed</div>
-            </div>
-            <div className='flex-col p-2 mt-1'>
-                <div>
-                    <div className='bg-primary text-center font-semibold rounded-t-sm p-[3px]'>Deposite Chips</div>
-                    <div className='bg-white text-[10px] text-center text-blue-500 p-1'>यह चिप्स Win अवं Buy की गई चिप्स है इनसे सिर्फ गेम खेले जा सकते है, बैंक या UPI से निकाला नहीं जा सकता है</div>
-                    <div className='bg-chips py-2 px-28'>
-                        <div className='bg-white flex-col rounded-sm'>
-                            <div className='flex justify-center'>
-                                <img src={rupeeLogo} alt="" className='w-5 h-5' />
-                            </div>
-                            <div className='flex justify-center items-center'>
-                                <img src={rupee2Logo} alt="" className='w-4 h-4' /><span className='text-[16px]'>0</span>
-                            </div>
-                            <div className='flex justify-center'>Chips</div>
-                        </div>
-                    </div>
-                    <div className=''>
-                        <button className='w-full bg-primary text-black px-4 py-2 rounded-b-sm font-semibold' onClick={() => {navigate('/AddCash')}}>Add</button>
-                    </div>
-                </div>
-                <div>
-                    <div className='bg-primary text-center font-semibold rounded-t-sm p-[3px] mt-2'>Winning Chips</div>
-                    <div className='bg-white text-[10px] text-center text-blue-500 p-1'>यह चिप्स Win अवं Buy की गई चिप्स है इनसे सिर्फ गेम खेले जा सकते है, बैंक या UPI से निकाला नहीं जा सकता है</div>
-                    <div className='bg-chips py-2 px-28'>
-                        <div className='bg-white flex-col rounded-sm'>
-                            <div className='flex justify-center'>
-                                <img src={rupeeLogo} alt="" className='w-5 h-5' />
-                            </div>
-                            <div className='flex justify-center items-center'>
-                                <img src={rupee2Logo} alt="" className='w-4 h-4' /><span className='text-[16px]'>0</span>
-                            </div>
-                            <div className='flex justify-center'>Chips</div>
-                        </div>
-                    </div>
-                    <div className=''>
-                        <button className='w-full bg-primary text-black px-4 py-2 rounded-b-sm font-semibold' onClick={() => {navigate('/AddCash')}}>Withdraw</button>
-                    </div>
-                </div>
-            </div>
+          </div>
+          <button
+            onClick={() => navigate('/AddCash')}
+            className="w-full bg-green-600 text-white py-2 font-semibold rounded-b-lg hover:bg-green-700 transition"
+          >
+            Add
+          </button>
         </div>
-        <Footer></Footer>
+
+        {/* Winning Chips */}
+        <div className="rounded-xl overflow-hidden shadow-md bg-white">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-center py-1 font-semibold">
+            Winning Chips
+          </div>
+          <div className="bg-red-50 text-[11px] text-center text-red-600 px-2 py-1">
+            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते हैं, बैंक या UPI से निकाला नहीं जा सकता है।
+          </div>
+          <div className="flex justify-center py-4 bg-gradient-to-br from-orange-100 to-yellow-200">
+            <div className="bg-white rounded-lg px-6 py-3 shadow text-center space-y-1">
+              <img src={rupeeLogo} alt="" className="w-6 h-6 mx-auto" />
+              <div className="flex justify-center items-center gap-1 text-xl font-bold">
+                <img src={rupee2Logo} alt="" className="w-4 h-4" />
+                <span>0</span>
+              </div>
+              <div className="text-gray-600 text-sm">Chips</div>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/AddCash')}
+            className="w-full bg-red-600 text-white py-2 font-semibold rounded-b-lg hover:bg-red-700 transition"
+          >
+            Withdraw
+          </button>
+        </div>
+      </div>
+
+      <Footer />
     </div>
+  );
 }

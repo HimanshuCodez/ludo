@@ -31,9 +31,9 @@ export function Profile() {
                         <img src={walletLogo} className='w-6 h-6' />
                         <span className='ml-2 font-medium text-gray-700'>My Wallet</span>
                     </button>
-                    <button onClick={() => navigate('/kyc')} className='flex items-center p-3 bg-white shadow rounded-lg hover:bg-primary/90 transition'>
+                    <button onClick={() => navigate('/Kyc-Verify')} className='flex items-center p-3 bg-white shadow rounded-lg hover:bg-primary/90 transition'>
                         <img src={kycLogo} className='w-6 h-6' />
-                        <span className='ml-2 font-medium text-gray-700'>KYC</span>
+                        <span className='ml-2 font-medium text-gray-700'>AADHAAR KYC</span>
                     </button>
                 </div>
 
