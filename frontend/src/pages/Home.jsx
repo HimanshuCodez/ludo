@@ -86,12 +86,7 @@ export function Home() {
           <div
             className="rounded-xl p-3 bg-gradient-to-br from-gray-700 to-gray-900 hover:scale-95 transition-transform duration-200 shadow-lg cursor-pointer"
             onClick={() => navigate("/Support")}
-          ><div>
-            <img src={ribbonLogo} alt="Support" className="mx-auto h-[70px]" />
-            <p className="font-bold font-roboto text-white text-center mt-2 text-xl">
-              Support
-            </p>
-          </div>
+          >
             <img src={WALogo} alt="Support" className="mx-auto mt-3 h-[70px]" />
             <p className="font-bold font-roboto text-white text-center mt-2 text-xl">
               Support
