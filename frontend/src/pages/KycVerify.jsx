@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase'; // Adjust path
+import { db, auth, storage } from '../firebase'; // Adjusted for storage
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 const KycVerify = () => {
@@ -22,6 +24,12 @@ const KycVerify = () => {
   };
 
   const handleSubmit = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      setError('Please log in to submit KYC verification.');
+      return;
+    }
+
     if (!aadhaarFile) {
       setError('Please upload an Aadhaar image.');
       return;
@@ -29,52 +37,41 @@ const KycVerify = () => {
 
     setLoading(true);
     setError('');
-    const uid = auth.currentUser?.uid || 'guest'; // Should be logged in
+    console.log('User:', user.uid, 'Starting upload process'); // Debug log
 
     try {
-      // Convert file to base64 for Cloudinary upload
+      // Convert file to base64
       const reader = new FileReader();
       const base64Image = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result);
+        reader.onloadend = () => resolve(reader.result.split(',')[1]); // Get base64 data without prefix
         reader.readAsDataURL(aadhaarFile);
       });
+      console.log('Base64 conversion successful, length:', base64Image.length);
 
-      // Upload to Cloudinary
-    const response = await fetch(
-  `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-  {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      file: base64Image,
-      upload_preset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
-      public_id: `kyc/${uid}_${uuidv4()}`,
-    }),
-  }
-);
-
-
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-
-      const downloadURL = result.secure_url;
+      // Upload to Firebase Storage
+      const fileName = `${user.uid}_${uuidv4()}`;
+      const storageRef = ref(storage, `kyc/${fileName}`);
+      console.log('Storage reference created:', storageRef.fullPath); // Debug log
+      await uploadString(storageRef, base64Image, 'base64');
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log('Storage upload successful, URL:', downloadURL);
 
       // Store in Firestore
-      await addDoc(collection(db, 'kyc_requests'), {
-        uid,
+      console.log('Attempting Firestore write with URL:', downloadURL);
+      const docRef = await addDoc(collection(db, 'kyc_requests'), {
+        uid: user.uid,
         aadhaarUrl: downloadURL,
         status: 'pending',
         createdAt: serverTimestamp(),
       });
+      console.log('Firestore write successful, Document ID:', docRef.id);
 
       setSuccess(true);
       setAadhaarFile(null);
       setPreview('');
     } catch (err) {
       console.error('[KycVerify] Upload Error:', err);
-      setError('Upload failed. Please try again.');
+      setError(`Upload failed: ${err.code ? `${err.code}: ` : ''}${err.message}`);
     } finally {
       setLoading(false);
     }

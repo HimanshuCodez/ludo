@@ -32,7 +32,7 @@ export function Menu() {
                     </div>
                     <ul className="">
                         <li className='p-[4px] bg-menu-base'>
-                            <button onClick={() => navigate('/')} className=" text-white  font-roboto text-[17px] w-full">
+                            <button onClick={() => navigate('/Matchmaking')} className=" text-white  font-roboto text-[17px] w-full">
                                 <div className='flex items-center mr-2 pl-14'><img src={gameLogo} className='w-8'></img><p className='ml-[12px]'>Play Game</p></div>
                             </button>
                         </li>

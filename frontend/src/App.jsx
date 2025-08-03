@@ -18,6 +18,7 @@ import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
+import KycAdmin from "./Admin/KycAdmin";
 
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
           <Route path='/Support' element={<Support />} />
           <Route path='/Pay' element={<Pay />} />
           <Route path='/Matchmaking' element={<Matchmaking />} />
+          <Route path='/Kyc-Admin' element={<KycAdmin/>} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
         {/* <Route
