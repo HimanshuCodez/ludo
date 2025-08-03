@@ -51,7 +51,7 @@ export function Pay() {
       return;
     }
 
-    const upiLink = `upi://pay?pa=khushisantoshi21@okaxis&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
+    const upiLink = `upi://pay?pa=7982461603@yapl&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
     window.location.href = upiLink; // Open UPI app
     window.localStorage.setItem('TransactionId', transactionId); // Store transaction ID
     setLoading(false);
