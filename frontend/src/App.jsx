@@ -7,7 +7,7 @@ import { History } from "./pages/History";
 import { MyWallet } from "./pages/MyWallet";
 import { Notifications } from "./pages/Notifications";
 import { Support } from "./pages/Support";
-import { Pay } from "./pages/Pay";
+
 import { Matchmaking } from "./pages/Matchmaking"; // Assuming Matchmaking is in ./pages
 import { GameRoom } from "./pages/GameRoom"; // <-- Naya import: GameRoom component ko import karein
 import { PrivateRoute } from "./Admin/PrivateRoute";
@@ -15,6 +15,8 @@ import Dashboard from "./Admin/Dashboard";
 
 import AuthPage from "./pages/AuthPage";
 import KycVerify from "./pages/KycVerify";
+import { Pay } from "./pages/Pay";
+import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 
 
 function App() {
@@ -35,6 +37,7 @@ function App() {
           <Route path='/Pay' element={<Pay />} />
           <Route path='/Matchmaking' element={<Matchmaking />} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
+          <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
         
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}

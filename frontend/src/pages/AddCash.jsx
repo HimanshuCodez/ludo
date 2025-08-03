@@ -10,7 +10,7 @@ export function AddCash() {
 
   const handleNext = () => {
     const parsedAmount = parseInt(amount);
-    if (!parsedAmount || parsedAmount < 50 || parsedAmount > 1000000) {
+    if (!parsedAmount || parsedAmount <10 || parsedAmount > 1000000) {
       alert('Please enter an amount between ₹50 and ₹1000000');
       return;
     }
