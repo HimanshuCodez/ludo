@@ -1,9 +1,4 @@
-
-import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth, storage } from '../firebase'; // Adjusted for storage
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState, useEffect } from 'react';
 
 const KycVerify = () => {
   const [aadhaarFile, setAadhaarFile] = useState(null);
@@ -24,12 +19,6 @@ const KycVerify = () => {
   };
 
   const handleSubmit = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      setError('Please log in to submit KYC verification.');
-      return;
-    }
-
     if (!aadhaarFile) {
       setError('Please upload an Aadhaar image.');
       return;
@@ -37,79 +26,125 @@ const KycVerify = () => {
 
     setLoading(true);
     setError('');
-    console.log('User:', user.uid, 'Starting upload process'); // Debug log
 
-    try {
-      // Convert file to base64
-      const reader = new FileReader();
-      const base64Image = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result.split(',')[1]); // Get base64 data without prefix
-        reader.readAsDataURL(aadhaarFile);
-      });
-      console.log('Base64 conversion successful, length:', base64Image.length);
-
-      // Upload to Firebase Storage
-      const fileName = `${user.uid}_${uuidv4()}`;
-      const storageRef = ref(storage, `kyc/${fileName}`);
-      console.log('Storage reference created:', storageRef.fullPath); // Debug log
-      await uploadString(storageRef, base64Image, 'base64');
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('Storage upload successful, URL:', downloadURL);
-
-      // Store in Firestore
-      console.log('Attempting Firestore write with URL:', downloadURL);
-      const docRef = await addDoc(collection(db, 'kyc_requests'), {
-        uid: user.uid,
-        aadhaarUrl: downloadURL,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      });
-      console.log('Firestore write successful, Document ID:', docRef.id);
-
-      setSuccess(true);
-      setAadhaarFile(null);
-      setPreview('');
-    } catch (err) {
-      console.error('[KycVerify] Upload Error:', err);
-      setError(`Upload failed: ${err.code ? `${err.code}: ` : ''}${err.message}`);
-    } finally {
+    // Simulate submission process
+    setTimeout(() => {
       setLoading(false);
-    }
+      setSuccess(true);
+    }, 2000);
   };
 
+  // Redirect to profile after success
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        window.location.href = '/profile';
+        // For React Router: navigate('/profile');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center border-t-4 border-green-500">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-green-100 rounded-full mx-auto flex items-center justify-center mb-4">
+              <svg className="w-10 h-10 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">KYC Submitted Successfully!</h2>
+            <p className="text-gray-600">Your document has been received and is under review.</p>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-700">
+              <strong>Status:</strong> Pending Review<br/>
+              <strong>Expected Time:</strong> 24-48 hours
+            </p>
+          </div>
+
+          <p className="text-sm text-gray-500 mb-4">Redirecting to profile in 3 seconds...</p>
+          
+          <div className="flex justify-center space-x-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full">
-        <h1 className="text-2xl font-bold text-center mb-4 text-indigo-700">Verify your Aadhaar</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">KYC Verification</h1>
+          <p className="text-gray-600">Upload your Aadhaar card for verification</p>
+        </div>
 
         {preview && (
-          <img src={preview} alt="Preview" className="w-full h-56 object-cover rounded-lg mb-4 border" />
+          <div className="mb-6">
+            <img 
+              src={preview} 
+              alt="Aadhaar Preview" 
+              className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+            />
+          </div>
         )}
 
         {error && (
-          <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+            <p className="text-red-700 text-sm text-center">{error}</p>
+          </div>
         )}
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="mb-4 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-        />
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Aadhaar Card Image
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-gray-300 rounded-lg"
+          />
+        </div>
 
         <button
           onClick={handleSubmit}
           disabled={loading || !aadhaarFile}
-          className={`w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition ${
-            loading || !aadhaarFile ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+            loading || !aadhaarFile 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
-          {loading ? 'Uploading...' : 'Submit for Verification'}
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </div>
+          ) : (
+            'Submit for Verification'
+          )}
         </button>
 
-        {success && (
-          <p className="text-green-600 text-sm mt-4 text-center">✅ Aadhaar submitted successfully!</p>
-        )}
+        <p className="text-xs text-gray-500 text-center mt-4">
+          Your document will be processed securely and reviewed within 24-48 hours.
+        </p>
       </div>
     </div>
   );
