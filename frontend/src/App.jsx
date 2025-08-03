@@ -18,7 +18,8 @@ import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
-import KycAdmin from "./Admin/KycAdmin";
+import { AdminApprovePanel } from "./Admin/AdminApprovePanel";
+
 
 
 function App() {
@@ -29,7 +30,7 @@ function App() {
         <Routes>
           <Route path='/' element={<AuthPage />} />
            
-        <Route path="/home" element={<Home />} />
+        <Route path="/home" element={ <PrivateRoute><Home /></PrivateRoute>} />
           <Route path='/Profile' element={<Profile />} />
           <Route path='/AddCash' element={<AddCash />} />
           <Route path='/Refer' element={<Refer />} />
@@ -39,17 +40,10 @@ function App() {
           <Route path='/Support' element={<Support />} />
           <Route path='/Pay' element={<Pay />} />
           <Route path='/Matchmaking' element={<Matchmaking />} />
-          <Route path='/Kyc-Admin' element={<KycAdmin/>} />
+          <Route path='/Kyc-Admin' element={<AdminApprovePanel/>} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
-        {/* <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <HomePage />
-            </PrivateRoute>
-          }
-        /> */}
+        
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard/></PrivateRoute>} />

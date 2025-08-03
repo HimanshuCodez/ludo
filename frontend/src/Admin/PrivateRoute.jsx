@@ -4,5 +4,5 @@ import { auth } from '../firebase';
 export function PrivateRoute({ children }) {
   const user = auth.currentUser;
 
-  return user ? children : <Navigate to="/signup" />;
+  return user ? children : <Navigate to="/" />;
 }

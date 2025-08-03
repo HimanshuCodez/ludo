@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
+import GameResultBox from "../Components/GameResultBox";
 
 export function GameRoom() {
   const { roomId } = useParams();
@@ -292,37 +293,7 @@ export function GameRoom() {
               </div>
             </div>
 
-            <div className="order-2">
-              <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
-                <div className="mb-2 font-bold text-lg text-center">Game Result</div>
-                <p className="text-gray-700 text-xs sm:text-sm text-center mb-4">
-                  After playing in Ludo King, return here and submit your result.
-                </p>
-                <div className="flex w-full gap-2">
-                  <button
-                    onClick={() => handleGameResult("I WON")}
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700"
-                    disabled={!gameStarted}
-                  >
-                    I WON
-                  </button>
-                  <button
-                    onClick={() => handleGameResult("I LOST")}
-                    className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700"
-                    disabled={!gameStarted}
-                  >
-                    I LOST
-                  </button>
-                  <button
-                    onClick={() => handleGameResult("CANCEL")}
-                    className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500"
-                    disabled={!gameStarted}
-                  >
-                    CANCEL
-                  </button>
-                </div>
-              </div>
-            </div>
+            <GameResultBox gameStarted={true} />
           </div>
 
           <div className="mt-6">
