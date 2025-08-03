@@ -37,133 +37,11 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
-const generateQR = async (upiString) => {
-  try {
-    return await QRCode.toDataURL(upiString);
-  } catch (err) {
-    console.error('[Server] QR Generation Error:', err);
-    throw err;
-  }
-};
 
-// Deposit Chips
-app.post('/depositChips', async (req, res) => {
-  const { userId, amount } = req.body;
-  if (!userId || isNaN(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid user ID or amount' });
-  }
+ 
 
-  const userRef = doc(db, 'users', userId);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) {
-    return res.status(404).json({ error: 'User not found' });
-  }
 
-  const currentBalance = userSnap.data().depositChips || 0;
-  const newBalance = currentBalance + parseInt(amount);
-  await updateDoc(userRef, { depositChips: newBalance });
 
-  io.to(userId).emit('walletUpdated', { balance: newBalance });
-  console.log(`[Server] Deposited ₹${amount} for ${userId}, new balance: ${newBalance}`);
-  res.status(200).json({ message: 'Chips deposited', balance: newBalance });
-});
-
-// Generate QR Code and Payment Request
-app.post('/QR', async (req, res) => {
-  const amount = parseInt(req.body.Amount);
-  const userId = req.body.userId;
-  if (!userId || isNaN(amount) || amount < 50 || amount > 100000) {
-    return res.status(400).json({ error: 'Invalid user ID or amount (50-100000)' });
-  }
-
-  const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const upiString = `upi://pay?pa=7378160677-2@axl&pn=Irfan&am=${amount}&cu=INR&tr=${transactionId}`;
-  const qr = await generateQR(upiString);
-
-  const paymentRequest = {
-    transactionId,
-    userId,
-    amount,
-    status: 'pending',
-    screenshotUrl: null,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 5 * 60 * 1000,
-  };
-
-  const paymentRef = doc(collection(db, 'payments'));
-  await setDoc(paymentRef, paymentRequest);
-  io.to(userId).emit('paymentRequestCreated', paymentRequest);
-
-  res.status(200).json({ qr, transactionId, expiresAt: paymentRequest.expiresAt });
-});
-
-// Upload Payment Screenshot to Firebase Storage
-app.post('/uploadScreenshot', async (req, res) => {
-  const { transactionId, userId, screenshotBase64 } = req.body;
-  if (!screenshotBase64 || !transactionId || !userId) {
-    return res.status(400).json({ error: 'Missing screenshot, transactionId, or userId' });
-  }
-
-  const paymentRef = doc(db, 'payments', transactionId);
-  const paymentSnap = await getDoc(paymentRef);
-  const paymentData = paymentSnap.data();
-
-  if (!paymentData || paymentData.status !== 'pending') {
-    return res.status(400).json({ error: 'Invalid or expired payment request' });
-  }
-
-  if (paymentData.expiresAt < Date.now()) {
-    await updateDoc(paymentRef, { status: 'expired' });
-    return res.status(400).json({ error: 'Payment request expired' });
-  }
-
-  const storageRef = ref(storage, `screenshots/${transactionId}`);
-  await uploadString(storageRef, screenshotBase64.split(',')[1], 'base64');
-  const screenshotUrl = await getDownloadURL(storageRef);
-
-  await updateDoc(paymentRef, {
-    screenshotUrl,
-    status: 'awaiting_verification',
-  });
-
-  io.to(userId).emit('screenshotUploaded', { transactionId, status: 'awaiting_verification' });
-  res.status(200).json({ message: 'Screenshot uploaded, awaiting admin verification' });
-});
-
-// Admin Endpoint to Verify Payment
-app.post('/admin/verifyPayment', async (req, res) => {
-  const { transactionId, isApproved } = req.body;
-  const paymentRef = doc(db, 'payments', transactionId);
-  const paymentSnap = await getDoc(paymentRef);
-  const paymentData = paymentSnap.data();
-
-  if (!paymentData || paymentData.status !== 'awaiting_verification') {
-    return res.status(400).json({ error: 'Invalid or already processed payment request' });
-  }
-
-  if (isApproved) {
-    paymentData.status = 'completed';
-    const userRef = doc(db, 'users', paymentData.userId);
-    const userSnap = await getDoc(userRef);
-    const currentBalance = userSnap.data().depositChips || 0;
-    const newBalance = currentBalance + paymentData.amount;
-    await updateDoc(userRef, { depositChips: newBalance });
-    await setDoc(paymentRef, paymentData);
-
-    io.to(paymentData.userId).emit('paymentValidated', {
-      transactionId,
-      amount: paymentData.amount,
-      walletBalance: newBalance,
-    });
-
-    res.status(200).json({ message: 'Payment approved', walletBalance: newBalance });
-  } else {
-    paymentData.status = 'rejected';
-    await setDoc(paymentRef, paymentData);
-    io.to(paymentData.userId).emit('paymentRejected', { transactionId, message: 'Payment rejected by admin' });
-    res.status(200).json({ message: 'Payment rejected' });
-  }
-});
 
 // Get Wallet Balance
 app.get('/wallet/:userId', async (req, res) => {
@@ -186,7 +64,12 @@ io.on('connection', (socket) => {
     const userSnap = await getDoc(userRef);
     const balance = userSnap.exists() ? userSnap.data().depositChips || 0 : 0;
     console.log(`[Server] Balance for ${userId} is ${balance}`);
-    socket.emit('walletUpdated', { balance });
+    if (balance >= 0) { // Ensure valid balance before emitting
+      socket.emit('walletUpdated', { balance });
+    } else {
+      console.log(`[Server] Invalid balance for ${userId}, using 0`);
+      socket.emit('walletUpdated', { balance: 0 });
+    }
   });
 
   socket.emit('updateChallenges', getClientChallenges(socket.id));
