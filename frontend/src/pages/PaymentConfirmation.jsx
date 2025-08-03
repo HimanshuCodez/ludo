@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CreditCard, 
@@ -11,8 +11,12 @@ import {
   Sparkles,
   ShieldCheck
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust path to your firebase config
 
-// Mock components for demo
+// Mock components for demo (replace with actual if available)
 const Header = () => <div className="h-16 bg-black/20 backdrop-blur-sm"></div>;
 const Footer = () => <div className="h-12 bg-black/20 backdrop-blur-sm mt-auto"></div>;
 
@@ -20,17 +24,17 @@ export function PaymentConfirmation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  // Mock user and amount for demo
-  const user = { uid: 'demo-user' };
-  const amount = 500; // Demo amount
+  const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const amount = parseFloat(window.localStorage.getItem('Amount') || 0); // Get amount from localStorage
 
   useEffect(() => {
-    // Demo: comment out navigation logic
-    // if (!user || !amount) {
-    //   setError('Invalid payment details. Please try again.');
-    //   navigate('/Pay');
-    // }
-  }, []);
+    if (!user || !amount) {
+      setError('Invalid payment details. Please try again.');
+      setTimeout(() => navigate('/Pay'), 2000); // Redirect after error
+    }
+  }, [user, amount, navigate]);
 
   const handleConfirmPayment = async () => {
     if (!amount) {
@@ -42,27 +46,25 @@ export function PaymentConfirmation() {
     setError('');
     
     try {
-      // Mock Firebase operations for demo
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      // const userRef = doc(db, 'users', user.uid);
-      // const userSnap = await getDoc(userRef);
-      // const currentChips = parseFloat(userSnap.data()?.depositChips) || 0;
-      // await updateDoc(userRef, {
-      //   depositChips: currentChips + amount,
-      //   updatedAt: new Date().toISOString(),
-      // });
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      const currentChips = parseFloat(userSnap.data()?.depositChips) || 0;
+
+      await updateDoc(userRef, {
+        depositChips: currentChips + amount,
+        updatedAt: new Date().toISOString(),
+      });
       
       setSuccess(true);
       
       // Navigate after showing success animation
       setTimeout(() => {
-        console.log('Navigating to wallet...');
-        // navigate('/MyWallet');
+        navigate('/MyWallet');
       }, 2000);
       
     } catch (err) {
       setError('Failed to update wallet. Please try again.');
+      console.error('Error updating wallet:', err);
     } finally {
       setLoading(false);
     }
