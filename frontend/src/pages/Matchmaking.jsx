@@ -3,17 +3,50 @@ import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
+import { getAuth } from "firebase/auth";
 
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust path to your firebase config
 export function Matchmaking() {
   const [amount, setAmount] = useState(5000);
   const [challenges, setChallenges] = useState([]);
   const [matches, setMatches] = useState([]);
   const [myChallengeId, setMyChallengeId] = useState(null);
   const [loading, setLoading] = useState(false);
+  
   const socketRef = useRef(null);
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const [balance, setBalance] = useState(0);
 
   useEffect(() => {
+    const fetchBalance = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setBalance(parseFloat(userData.depositChips) || 0);
+          } else {
+            setBalance(0); // Default to 0 if no document exists
+          }
+        } catch (error) {
+          console.error('Error fetching balance:', error);
+          setBalance(0); // Fallback to 0 on error
+        }
+      }
+    };
+
+    fetchBalance();
+  }, [user]);
+  useEffect(() => {
+    if (!user?.uid) {
+      console.log("[Client] No user UID available");
+      return;
+    }
+
     const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
@@ -24,7 +57,8 @@ export function Matchmaking() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log(`[Client] Matchmaking connected as ${socket.id}`);
+      console.log(`[Client] Matchmaking connected as ${socket.id} for user ${user.uid}`);
+      socket.emit("fetchWalletBalance", user.uid); // Fetch initial balance
     });
 
     socket.on("updateChallenges", (list) => {
@@ -58,55 +92,52 @@ export function Matchmaking() {
     });
 
     socket.on("reconnect", () => {
-      console.log("[Client] Reconnected to server");
+      console.log("[Client] Reconnected to server for user ${user.uid}");
+      socket.emit("fetchWalletBalance", user.uid); // Fetch balance on reconnect
     });
 
     return () => {
-     
       socket.off("connect");
       socket.off("updateChallenges");
       socket.off("updateMatches");
       socket.off("yourChallengeId");
       socket.off("matchConfirmed");
       socket.off("error");
+      socket.off("walletUpdated");
       socket.off("disconnect");
       socket.off("reconnect");
     };
-  }, [navigate]);
-const handleSet = () => {
-  if (parseInt(amount) > 0) {
+  }, [navigate, user?.uid]);
+
+  const handleSet = () => {
+    if (parseInt(amount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    if (balance < parseInt(amount)) {
+      alert("Low balance! Please add cash to create a challenge.");
+      return;
+    }
     setLoading(true);
-    console.log(`[Client] Creating challenge for ₹${amount}`);
-    socketRef.current.emit("challenge:create", { amount }, (success) => {
+    console.log(`[Client] Creating challenge for ₹${amount} by ${user?.displayName || user?.uid}`);
+    socketRef.current.emit("challenge:create", { amount, userId: user.uid }, (success) => {
       setLoading(false);
       if (!success) {
         alert("Failed to create challenge.");
       }
     });
-  } else {
-    alert("Please enter a valid amount.");
-  }
-};
-
-  // const handleSet = () => {
-  //   if (parseInt(amount) > 0) {
-  //     setLoading(true);
-  //     console.log(`[Client] Creating challenge for ₹${amount}`);
-  //     socketRef.current.emit("challenge:create", { amount }, (success) => {
-  //       setLoading(false);
-  //       if (!success) {
-  //         alert("Failed to create challenge.");
-  //       }
-  //     });
-  //   } else {
-  //     alert("Please enter a valid amount.");
-  //   }
-  // };
+  };
 
   const handlePlay = (challengeId) => {
+    const challenge = challenges.find((c) => c.id === challengeId);
+    if (!challenge) return;
+    if (balance < challenge.amount) {
+      alert("Low balance! Please add cash to accept this challenge.");
+      return;
+    }
     setLoading(true);
-    console.log(`[Client] Accepting challenge ${challengeId}`);
-    socketRef.current.emit("challenge:accept", { challengeId }, (success) => {
+    console.log(`[Client] Accepting challenge ${challengeId} by ${user?.displayName || user?.uid}`);
+    socketRef.current.emit("challenge:accept", { challengeId, userId: user.uid }, (success) => {
       setLoading(false);
       if (!success) {
         alert("Failed to accept challenge.");
@@ -158,6 +189,7 @@ const handleSet = () => {
               Waiting for opponent to click Play...
             </div>
           )}
+          <div className="mt-2 text-center text-gray-600">Balance: ₹{balance.toFixed(2)}</div>
         </div>
 
         <div className="mb-7">
