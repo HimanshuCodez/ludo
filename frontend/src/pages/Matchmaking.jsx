@@ -3,6 +3,9 @@ import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -10,10 +13,35 @@ export function Matchmaking() {
   const [matches, setMatches] = useState([]);
   const [myChallengeId, setMyChallengeId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(0);
   const socketRef = useRef(null);
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser;
 
   useEffect(() => {
+    // Fetch user balance
+    const fetchBalance = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setBalance(parseFloat(userData.depositChips) || 0);
+          } else {
+            setBalance(0);
+          }
+        } catch (error) {
+          console.error('Error fetching balance:', error);
+          setBalance(0);
+        }
+      }
+    };
+
+    fetchBalance();
+
+    // Socket.IO setup
     const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
@@ -62,7 +90,6 @@ export function Matchmaking() {
     });
 
     return () => {
-      // Remove socket.disconnect() to persist connection
       socket.off("connect");
       socket.off("updateChallenges");
       socket.off("updateMatches");
@@ -72,32 +99,42 @@ export function Matchmaking() {
       socket.off("disconnect");
       socket.off("reconnect");
     };
-  }, [navigate]);
+  }, [navigate, user]);
 
   const handleSet = () => {
-    if (parseInt(amount) > 0) {
-      setLoading(true);
-      console.log(`[Client] Creating challenge for ₹${amount}`);
-      socketRef.current.emit("challenge:create", { amount }, (success) => {
-        setLoading(false);
-        if (!success) {
-          alert("Failed to create challenge.");
-        }
-      });
+    const challengeAmount = parseInt(amount);
+    if (challengeAmount > 0) {
+      if (balance >= challengeAmount) {
+        setLoading(true);
+        console.log(`[Client] Creating challenge for ₹${amount}`);
+        socketRef.current.emit("challenge:create", { amount }, (success) => {
+          setLoading(false);
+          if (!success) {
+            alert("Failed to create challenge.");
+          }
+        });
+      } else {
+        alert("Insufficient balance to create this challenge.");
+      }
     } else {
       alert("Please enter a valid amount.");
     }
   };
 
   const handlePlay = (challengeId) => {
-    setLoading(true);
-    console.log(`[Client] Accepting challenge ${challengeId}`);
-    socketRef.current.emit("challenge:accept", { challengeId }, (success) => {
-      setLoading(false);
-      if (!success) {
-        alert("Failed to accept challenge.");
-      }
-    });
+    const challenge = challenges.find((ch) => ch.id === challengeId);
+    if (challenge && balance >= challenge.amount) {
+      setLoading(true);
+      console.log(`[Client] Accepting challenge ${challengeId}`);
+      socketRef.current.emit("challenge:accept", { challengeId }, (success) => {
+        setLoading(false);
+        if (!success) {
+          alert("Failed to accept challenge.");
+        }
+      });
+    } else {
+      alert("Insufficient balance to accept this challenge.");
+    }
   };
 
   const VSRow = ({ playerA, playerB, amount }) => (
@@ -114,6 +151,7 @@ export function Matchmaking() {
       <Header />
       <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+          <div className="text-gray-700 mb-3">Your Balance: ₹{balance.toFixed(2)}</div>
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
