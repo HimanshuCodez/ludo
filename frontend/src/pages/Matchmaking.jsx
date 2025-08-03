@@ -3,7 +3,6 @@ import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
-import { getAuth } from "firebase/auth";
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -13,15 +12,8 @@ export function Matchmaking() {
   const [loading, setLoading] = useState(false);
   const socketRef = useRef(null);
   const navigate = useNavigate();
-  const auth = getAuth();
-  const user = auth.currentUser;
 
   useEffect(() => {
-    if (!user?.uid) {
-      console.log("[Client] No user UID available");
-      return;
-    }
-
     const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
@@ -32,8 +24,7 @@ export function Matchmaking() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log(`[Client] Matchmaking connected as ${socket.id} for ${user.uid}`);
-      socket.emit("fetchWalletBalance", user.uid);
+      console.log(`[Client] Matchmaking connected as ${socket.id}`);
     });
 
     socket.on("updateChallenges", (list) => {
@@ -56,11 +47,6 @@ export function Matchmaking() {
       navigate(`/room/${roomId}`);
     });
 
-    socket.on("joinRoom", ({ roomId, userName }) => {
-      console.log(`[Client] Joining room ${roomId} as ${userName}`);
-      navigate(`/room/${roomId}`);
-    });
-
     socket.on("error", ({ message }) => {
       console.log(`[Client] Error: ${message}`);
       setLoading(false);
@@ -72,40 +58,31 @@ export function Matchmaking() {
     });
 
     socket.on("reconnect", () => {
-      console.log("[Client] Reconnected to server for ${user.uid}");
-      socket.emit("fetchWalletBalance", user.uid);
-    });
-
-    socket.on("connect_error", (error) => {
-      console.error("[Client] Connection Error:", error.message);
-      alert("Failed to connect to the server. Please try again.");
+      console.log("[Client] Reconnected to server");
     });
 
     return () => {
+      // Remove socket.disconnect() to persist connection
       socket.off("connect");
       socket.off("updateChallenges");
       socket.off("updateMatches");
       socket.off("yourChallengeId");
       socket.off("matchConfirmed");
-      socket.off("joinRoom");
       socket.off("error");
       socket.off("disconnect");
       socket.off("reconnect");
-      socket.off("connect_error");
     };
-  }, [navigate, user?.uid]);
+  }, [navigate]);
 
   const handleSet = () => {
-    if (!user?.uid) {
-      alert("Please log in to create a challenge.");
-      return;
-    }
     if (parseInt(amount) > 0) {
       setLoading(true);
-      console.log(`[Client] Creating challenge for ₹${amount} by ${user.uid}`);
-      socketRef.current.emit("challenge:create", { amount, userId: user.uid }, (success) => {
+      console.log(`[Client] Creating challenge for ₹${amount}`);
+      socketRef.current.emit("challenge:create", { amount }, (success) => {
         setLoading(false);
-        if (!success) alert("Failed to create challenge.");
+        if (!success) {
+          alert("Failed to create challenge.");
+        }
       });
     } else {
       alert("Please enter a valid amount.");
@@ -113,15 +90,13 @@ export function Matchmaking() {
   };
 
   const handlePlay = (challengeId) => {
-    if (!user?.uid) {
-      alert("Please log in to accept a challenge.");
-      return;
-    }
     setLoading(true);
-    console.log(`[Client] Accepting challenge ${challengeId} by ${user.uid}`);
-    socketRef.current.emit("challenge:accept", { challengeId, userId: user.uid }, (success) => {
+    console.log(`[Client] Accepting challenge ${challengeId}`);
+    socketRef.current.emit("challenge:accept", { challengeId }, (success) => {
       setLoading(false);
-      if (!success) alert("Failed to accept challenge.");
+      if (!success) {
+        alert("Failed to accept challenge.");
+      }
     });
   };
 
