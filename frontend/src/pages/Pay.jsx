@@ -3,6 +3,7 @@ import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
+import QRCode from 'react-qr-code';
 
 export function Pay() {
   const [amount] = useState(window.localStorage.getItem('Amount') || 0);
@@ -14,8 +15,8 @@ export function Pay() {
   const auth = getAuth();
   const user = auth.currentUser;
   const transactionId = Date.now().toString();
+  const upiId = 'khushisantoshi21@okaxis';
 
-  // Timer countdown
   useEffect(() => {
     if (!timeLeft || timeLeft <= 0) {
       setPaymentStatus('expired');
@@ -36,7 +37,6 @@ export function Pay() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // Initialize payment
   useEffect(() => {
     if (!user) {
       setError('Please log in to proceed with payment.');
@@ -45,19 +45,18 @@ export function Pay() {
     }
 
     if (!amount || isNaN(amount) || amount < 10 || amount > 100000) {
-      setError('Invalid amount. Please select an amount between ₹50 and ₹100000.');
+      setError('Invalid amount. Please select an amount between ₹10 and ₹100000.');
       setLoading(false);
       navigate('/AddCash');
       return;
     }
 
-    const upiLink = `upi://pay?pa=7982461603@yapl&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
-    window.location.href = upiLink; // Open UPI app
-    window.localStorage.setItem('TransactionId', transactionId); // Store transaction ID
+    window.localStorage.setItem('TransactionId', transactionId);
     setLoading(false);
   }, [amount, navigate, user]);
 
-  // Navigate to confirmation when ready or on manual trigger (e.g., back button)
+  const upiString = `upi://pay?pa=${upiId}&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
+
   const handleProceedToConfirm = () => {
     if (paymentStatus === 'pending') {
       navigate('/PaymentConfirmation');
@@ -70,21 +69,27 @@ export function Pay() {
       <div className="p-6 md:p-10 text-white flex flex-col items-center">
         <h1 className="text-4xl font-bold text-center mb-6 drop-shadow-md">Pay Now</h1>
 
-        {loading && <div className="text-lg text-center animate-pulse">Processing payment...</div>}
+        {loading && <div className="text-lg text-center animate-pulse">Loading payment details...</div>}
 
         {error && <div className="text-red-500 text-center mb-4 text-lg">{error}</div>}
 
         {!loading && paymentStatus === 'pending' && (
           <div className="bg-opacity-5 rounded-xl shadow-xl p-6 flex flex-col items-center w-full max-w-md">
             <p className="text-lg text-center mb-3">
-              A payment request of <span className="font-bold">₹{amount}</span> has been sent to your UPI app. Please complete the payment.
+              Scan this QR to pay <span className="font-bold">₹{amount}</span>
             </p>
+
+            <div className="mb-5 bg-white p-2 rounded">
+              <QRCode value={upiString} size={200} />
+            </div>
+
             <p className="text-lg font-mono mb-5 text-yellow-300">
               ⏳ Time Left:{' '}
               <span className="font-bold text-white">
                 {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
               </span>
             </p>
+
             <button
               onClick={handleProceedToConfirm}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold transition duration-300"
@@ -97,10 +102,7 @@ export function Pay() {
         {paymentStatus === 'expired' && (
           <div className="text-red-500 text-lg text-center mt-6">
             ⚠️ Payment request expired.{' '}
-            <button
-              onClick={() => navigate('/AddCash')}
-              className="text-blue-300 underline ml-1"
-            >
+            <button onClick={() => navigate('/AddCash')} className="text-blue-300 underline ml-1">
               Try again
             </button>
           </div>
