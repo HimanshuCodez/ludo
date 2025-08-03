@@ -9,7 +9,7 @@ import { Notifications } from "./pages/Notifications";
 import { Support } from "./pages/Support";
 
 import { Matchmaking } from "./pages/Matchmaking"; // Assuming Matchmaking is in ./pages
-import  GameRoom  from "./pages/GameRoom"; // <-- Naya import: GameRoom component ko import karein
+import  {GameRoom}  from "./pages/GameRoom"; // <-- Naya import: GameRoom component ko import karein
 import { PrivateRoute } from "./Admin/PrivateRoute";
 import Dashboard from "./Admin/Dashboard";
 
