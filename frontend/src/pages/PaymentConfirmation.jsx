@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Header } from '../Components/Header';
+import { Footer } from '../Components/Footer';
 
 export function PaymentConfirmation() {
   const [loading, setLoading] = useState(false);

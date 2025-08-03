@@ -17,11 +17,13 @@ import AuthPage from "./pages/AuthPage";
 import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
+import { AuthProvider } from "./context/AuthContext";
 
 
 function App() {
   return (
     <div>
+      <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path='/' element={<AuthPage />} />
@@ -38,12 +40,20 @@ function App() {
           <Route path='/Matchmaking' element={<Matchmaking />} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
-        
+        {/* <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <HomePage />
+            </PrivateRoute>
+          }
+        /> */}
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard/></PrivateRoute>} />
         </Routes>
       </BrowserRouter>
+      </AuthProvider>
     </div>
   )
 }

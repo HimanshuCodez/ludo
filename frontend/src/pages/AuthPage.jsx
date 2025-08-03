@@ -1,22 +1,32 @@
-import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-} from "firebase/auth";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 export default function AuthPage() {
-  
+  const { user, loading } = useAuth();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [referral, setReferral] = useState("");
   const [name, setName] = useState("");
-
   const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
+
+  // Redirect if already logged in and user exists in Firestore
+  useEffect(() => {
+    const checkUserAndRedirect = async () => {
+      if (!loading && user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          navigate("/home");
+        }
+      }
+    };
+    checkUserAndRedirect();
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     const auth = getAuth();
