@@ -6,7 +6,6 @@ import {
   updateDoc,
   query,
   where,
-  limit,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -17,16 +16,15 @@ const AdminKycApprove = () => {
   const [adminUid, setAdminUid] = useState(null);
   const [error, setError] = useState('');
 
-  // Watch current logged-in admin
+  // Track current logged-in admin
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) setAdminUid(user.uid);
-      else setAdminUid(null);
+      setAdminUid(user ? user.uid : null);
     });
     return () => unsub();
   }, []);
 
-  // Auto fetch the first user with pending KYC
+  // Fetch one user with Pending KYC
   useEffect(() => {
     const fetchPendingKyc = async () => {
       setError('');
@@ -34,13 +32,13 @@ const AdminKycApprove = () => {
       try {
         const q = query(
           collection(db, 'users'),
-          where('kycStatus', '==', 'Pending'),
-          
+          where('kycStatus', '==', 'Pending')
         );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const userSnap = querySnapshot.docs[0];
-          setUserDoc({ id: userSnap.id, ...userSnap.data() });
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const docSnap = snapshot.docs[0];
+          setUserDoc({ id: docSnap.id, ...docSnap.data() });
         } else {
           setError('No users found with pending KYC.');
         }
@@ -70,26 +68,37 @@ const AdminKycApprove = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex items-start justify-center">
-      <div className="w-full max-w-lg bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">KYC Review</h2>
+    <div className="min-h-screen bg-gray-100 p-6 flex items-start justify-center">
+      <div className="w-full max-w-xl bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">KYC Review Panel</h2>
 
         {error && (
-          <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>
+          <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm">
+            {error}
+          </div>
         )}
 
         {userDoc && (
           <div>
             <p className="text-sm text-gray-500 mb-2">
-              <strong>User ID:</strong> {userDoc.name}
+              <strong>User Name:</strong> {userDoc.name}
             </p>
 
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-700 mb-2">Aadhaar Preview:</h3>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Aadhaar Front:</h3>
               <img
-                src={userDoc.aadhaarUrl}
-                alt="Aadhaar"
-                className="w-full max-h-80 object-contain rounded border"
+                src={userDoc.aadhaarFrontUrl}
+                alt="Aadhaar Front"
+                className="w-full max-h-72 object-contain rounded border"
+              />
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Aadhaar Back:</h3>
+              <img
+                src={userDoc.aadhaarBackUrl}
+                alt="Aadhaar Back"
+                className="w-full max-h-72 object-contain rounded border"
               />
             </div>
 
@@ -107,7 +116,7 @@ const AdminKycApprove = () => {
                 {userDoc.kycStatus || 'Not Submitted'}
               </span>
             </p>
- {userDoc.role === "admin" && (
+
             <div className="flex space-x-4 mt-4 justify-end">
               <button
                 onClick={() => updateStatus('Approved')}
@@ -122,7 +131,7 @@ const AdminKycApprove = () => {
                 Reject
               </button>
             </div>
- )}
+
             {statusMessage && (
               <div className="mt-4 text-green-700 bg-green-100 px-3 py-2 rounded text-sm">
                 {statusMessage}
