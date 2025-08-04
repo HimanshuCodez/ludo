@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db, storage, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function GameResultComponent({ gameStarted }) {
-  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(20 * 60);
   const [showResultBox, setShowResultBox] = useState(false);
   const [gameResult, setGameResult] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUserId(user ? user.uid : null);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let timer;
 
     if (gameStarted) {
       timer = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
             setShowResultBox(true);
@@ -31,25 +45,87 @@ export default function GameResultComponent({ gameStarted }) {
     return `${m}:${s}`;
   };
 
+  const handleFileUpload = async (file) => {
+    if (!file || !userId) return;
+
+    const fileRef = ref(storage, `gameProofs/${userId}_${Date.now()}.jpg`);
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+      await updateDoc(doc(db, 'users', userId), {
+        lastGameProofUrl: downloadURL,
+        lastGameResult: 'I WON',
+        lastGameAt: new Date().toISOString(),
+      });
+      setUploading(false);
+      setShowSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setUploadError('Upload failed. Please try again.');
+      setUploading(false);
+    }
+  };
+
   const handleGameResult = (result) => {
     setGameResult(result);
-    
-    if (result === "I WON" || result === "I LOST") {
-      // Show success after a brief delay
+
+    if (result === 'I WON') {
+      // Show upload prompt
+    } else if (result === 'I LOST') {
       setTimeout(() => {
         setShowSuccess(true);
       }, 500);
-    } else if (result === "CANCEL") {
-      // Reset to initial state
+    } else if (result === 'CANCEL') {
       setShowResultBox(false);
       setGameResult(null);
       setTimeLeft(20 * 60);
     }
-    
-    console.log("Result submitted:", result);
   };
 
-  // Success state after game result submission
+  const resetAll = () => {
+    setShowSuccess(false);
+    setShowResultBox(false);
+    setGameResult(null);
+    setTimeLeft(20 * 60);
+    setUploadError('');
+  };
+
+  // === Upload Prompt ===
+  if (gameResult === 'I WON' && !showSuccess) {
+    return (
+      <div className="order-2">
+        <div className="bg-white rounded-lg shadow p-6 text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Upload Screenshot</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Please upload a screenshot of your winning screen in Ludo King.
+          </p>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e.target.files[0])}
+            className="mb-4"
+            disabled={uploading}
+          />
+
+          {uploadError && (
+            <div className="text-red-600 text-sm mb-2">{uploadError}</div>
+          )}
+
+          {uploading ? (
+            <p className="text-blue-600 text-sm">Uploading...</p>
+          ) : (
+            <p className="text-sm text-gray-500">Only image files allowed</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // === Success UI ===
   if (showSuccess) {
     return (
       <div className="order-2">
@@ -61,54 +137,27 @@ export default function GameResultComponent({ gameStarted }) {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {gameResult === "I WON" ? "Congratulations! 🎉" : "Better Luck Next Time! 💪"}
+              {gameResult === 'I WON' ? 'Congratulations! 🎉' : 'Better Luck Next Time! 💪'}
             </h2>
             <p className="text-gray-600 mb-4">
-              {gameResult === "I WON" 
-                ? "Your winning has been recorded successfully!" 
-                : "Your result has been recorded. Keep practicing!"
-              }
+              {gameResult === 'I WON'
+                ? 'Your winning screenshot has been recorded!'
+                : 'Your result has been recorded. Keep practicing!'}
             </p>
           </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 w-full">
-            <p className="text-sm text-gray-700 text-center">
-              <strong>Game Result:</strong> {gameResult}<br/>
-              <strong>Status:</strong> Verified ✅<br/>
-              <strong>Recorded At:</strong> {new Date().toLocaleTimeString()}
-            </p>
-          </div>
-
-          {gameResult === "I WON" && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 w-full">
-              <p className="text-green-700 text-sm text-center font-medium">
-                🏆 Victory Bonus: +500 Points Added!
-              </p>
-            </div>
-          )}
 
           <button
-            onClick={() => {
-              setShowSuccess(false);
-              setShowResultBox(false);
-              setGameResult(null);
-              setTimeLeft(20 * 60);
-            }}
+            onClick={resetAll}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             Play Another Game
           </button>
-          
-          <div className="flex justify-center space-x-1 mt-4">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-          </div>
         </div>
       </div>
     );
   }
 
+  // === Default Timer & Result UI ===
   return (
     <div className="order-2">
       <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
@@ -120,9 +169,9 @@ export default function GameResultComponent({ gameStarted }) {
             </p>
             <div className="text-3xl font-mono text-blue-600 mb-4">{formatTime(timeLeft)}</div>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-1000" 
-                style={{width: `${((20 * 60 - timeLeft) / (20 * 60)) * 100}%`}}
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
+                style={{ width: `${((20 * 60 - timeLeft) / (20 * 60)) * 100}%` }}
               ></div>
             </div>
           </>
@@ -136,19 +185,19 @@ export default function GameResultComponent({ gameStarted }) {
             </p>
             <div className="flex w-full gap-2">
               <button
-                onClick={() => handleGameResult("I WON")}
+                onClick={() => handleGameResult('I WON')}
                 className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition-colors"
               >
                 I WON
               </button>
               <button
-                onClick={() => handleGameResult("I LOST")}
+                onClick={() => handleGameResult('I LOST')}
                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
               >
                 I LOST
               </button>
               <button
-                onClick={() => handleGameResult("CANCEL")}
+                onClick={() => handleGameResult('CANCEL')}
                 className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500 transition-colors"
               >
                 CANCEL

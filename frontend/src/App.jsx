@@ -27,6 +27,7 @@ import AdminKycApprove from "./Admin/AdminKycApprove";
 
 
 
+
 function App() {
   return (
     <div>
@@ -51,6 +52,7 @@ function App() {
           <Route path='/Withdraw-admin' element={<WithdrawAdmin />} />
           <Route path='/Win-Approve' element={<WinApprove />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
+       
         
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}
