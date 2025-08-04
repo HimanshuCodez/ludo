@@ -71,64 +71,63 @@ export default function AuthPage() {
     }
   };
 
-  const verifyOTP = async () => {
-    if (!confirmationResult) {
-      alert("Please request a new OTP first.");
-      return;
+ const verifyOTP = async () => {
+  if (!confirmationResult) {
+    alert("Please request a new OTP first.");
+    return;
+  }
+
+  if (!otp || otp.length !== 6 || isNaN(otp)) {
+    alert("Please enter a valid 6-digit OTP");
+    return;
+  }
+
+  try {
+    const result = await confirmationResult.confirm(otp);
+    const user = result.user;
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      const generateReferralCode = () => {
+        const prefix = name?.substring(0, 3)?.toUpperCase() || "REF";
+        const suffix = Math.random()
+          .toString(36)
+          .substring(2, 6)
+          .toUpperCase();
+        return `${prefix}${suffix}`;
+      };
+
+      await setDoc(userRef, {
+        uid: user.uid,
+        phoneNumber: user.phoneNumber,
+        name: name || "Anonymous",
+        referral: referral || null,
+        referralCode: generateReferralCode(),
+        createdAt: new Date().toISOString(),
+      });
     }
-    if (!otp || otp.length !== 6 || isNaN(otp)) {
-      alert("Please enter a valid 6-digit OTP");
-      return;
+
+ 
+    alert("Phone number verified!");
+    navigate("/home");
+
+  } catch (error) {
+    console.error("OTP verification failed", error);
+    if (
+      error.code === "auth/invalid-verification-code" ||
+      error.code === "auth/code-expired"
+    ) {
+      alert("Invalid or expired OTP. Please request a new OTP.");
+      setConfirmationResult(null);
+    } else if (error.code === "permission-denied") {
+      alert("Error: Missing or insufficient permissions. Check Firestore rules.");
+    } else {
+      alert("Invalid OTP: " + error.message);
     }
-    try {
-      console.log("Verifying OTP:", otp);
-      const result = await confirmationResult.confirm(otp);
-      console.log("Verification Result:", result);
-      const user = result.user;
-      console.log("Authenticated User:", user.uid, user.phoneNumber);
-
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        const generateReferralCode = () => {
-          const prefix = name?.substring(0, 3)?.toUpperCase() || "REF";
-          const suffix = Math.random()
-            .toString(36)
-            .substring(2, 6)
-            .toUpperCase();
-          return `${prefix}${suffix}`;
-        };
-
-        await setDoc(userRef, {
-          uid: user.uid,
-          phoneNumber: user.phoneNumber,
-          name: name || "Anonymous",
-          referral: referral || null,
-          referralCode: generateReferralCode(),
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      alert("Phone number verified!");
-      navigate("/home");
-    } catch (error) {
-      console.error("OTP verification failed", error);
-      if (
-        error.code === "auth/invalid-verification-code" ||
-        error.code === "auth/code-expired"
-      ) {
-        alert("Invalid or expired OTP. Please request a new OTP.");
-        setConfirmationResult(null);
-      } else if (error.code === "permission-denied") {
-        alert(
-          "Error: Missing or insufficient permissions. Check Firestore rules."
-        );
-      } else {
-        alert("Invalid OTP: " + error.message);
-      }
-    }
-  };
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-yellow-100 font-sans px-4">

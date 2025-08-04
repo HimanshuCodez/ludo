@@ -1,10 +1,17 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const fs = require('fs').promises;
-const path = require('path');
+import express from "express";
+import mongoose from "mongoose";
+import http from "http";
+import { Server } from "socket.io";
+import cors from "cors";
+import dotenv from "dotenv";
 
+import path from "path";
+import fs from 'fs/promises';
+
+import { fileURLToPath } from 'url';
+dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -15,14 +22,18 @@ const io = new Server(server, {
     ],
     methods: ["GET", "POST"],
     credentials: true,
-  }
+  },
 });
 
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.get('/', (req, res) => {
-  res.send('Ludo Challenge Pool Server is Running!');
-});
+
+
+
+// Routes
+
+
 
 let challenges = [];
 let matches = [];
@@ -82,7 +93,7 @@ io.on('connection', (socket) => {
 
     challenges.push(challenge);
 
-    
+
     socket.emit('yourChallengeId', challenge.id);
     updateAllQueues();
     console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);

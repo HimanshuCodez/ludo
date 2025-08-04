@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { storage, db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 const KycVerify = () => {
   const [aadhaarFile, setAadhaarFile] = useState(null);
@@ -6,6 +11,42 @@ const KycVerify = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [uid, setUid] = useState(null);
+  const [userData, setUserData] = useState({});
+
+  // Watch for logged-in user
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUid(user.uid);
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          const generateReferralCode = () => {
+            const prefix = (user.displayName || 'REF').substring(0, 3).toUpperCase();
+            const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+            return `${prefix}${suffix}`;
+          };
+
+          await setDoc(userRef, {
+            uid: user.uid,
+            phoneNumber: user.phoneNumber,
+            name: user.displayName || 'Anonymous',
+            referral: null,
+            referralCode: generateReferralCode(),
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          setUserData(userSnap.data());
+        }
+      } else {
+        setUid(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -24,24 +65,44 @@ const KycVerify = () => {
       return;
     }
 
+    if (!uid) {
+      setError('User not authenticated.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
-    // Simulate submission process
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const uniqueFileName = `aadhaar_${uid}_${uuidv4()}`;
+      const storageRef = ref(storage, `kyc/${uid}/${uniqueFileName}`);
+      await uploadBytes(storageRef, aadhaarFile);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const userRef = doc(db, 'users', uid);
+
+      // Add Aadhaar info to existing user document
+      await updateDoc(userRef, {
+        aadhaarUrl: downloadURL,
+        kycStatus: 'Pending',
+        kycSubmittedAt: new Date().toISOString(),
+      });
+
       setSuccess(true);
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to upload document. Please try again.');
+    }
+
+    setLoading(false);
   };
 
-  // Redirect to profile after success
+  // Redirect on success
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
         window.location.href = '/profile';
-        // For React Router: navigate('/profile');
       }, 3000);
-
       return () => clearTimeout(timer);
     }
   }, [success]);
@@ -59,20 +120,17 @@ const KycVerify = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">KYC Submitted Successfully!</h2>
             <p className="text-gray-600">Your document has been received and is under review.</p>
           </div>
-          
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-gray-700">
-              <strong>Status:</strong> Pending Review<br/>
+              <strong>Status:</strong> Pending Review<br />
               <strong>Expected Time:</strong> 24-48 hours
             </p>
           </div>
-
           <p className="text-sm text-gray-500 mb-4">Redirecting to profile in 3 seconds...</p>
-          
           <div className="flex justify-center space-x-1">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
           </div>
         </div>
       </div>
@@ -94,9 +152,9 @@ const KycVerify = () => {
 
         {preview && (
           <div className="mb-6">
-            <img 
-              src={preview} 
-              alt="Aadhaar Preview" 
+            <img
+              src={preview}
+              alt="Aadhaar Preview"
               className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
             />
           </div>
@@ -124,8 +182,8 @@ const KycVerify = () => {
           onClick={handleSubmit}
           disabled={loading || !aadhaarFile}
           className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-            loading || !aadhaarFile 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            loading || !aadhaarFile
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >

@@ -181,48 +181,6 @@ const Withdraw = () => {
             )}
           </div>
 
-          {/* Screenshot Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Payment Screenshot <span className="text-red-500">*</span>
-            </label>
-            
-            {preview && (
-              <div className="mb-4">
-                <img 
-                  src={preview} 
-                  alt="Payment Screenshot" 
-                  className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                />
-              </div>
-            )}
-
-            <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              errors.screenshot ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-purple-400'
-            }`}>
-              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">
-                Click to upload or drag and drop
-              </p>
-              <p className="text-xs text-gray-500 mb-4">
-                PNG, JPG or JPEG (max. 5MB)
-              </p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 file:cursor-pointer cursor-pointer"
-              />
-            </div>
-            
-            {errors.screenshot && (
-              <p className="text-red-600 text-sm mt-1 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                {errors.screenshot}
-              </p>
-            )}
-          </div>
-
           {/* Submit Button */}
           <button
             type="submit"

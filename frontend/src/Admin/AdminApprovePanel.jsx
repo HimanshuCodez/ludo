@@ -1,97 +1,138 @@
-// src/components/AdminApprovePanel.jsx
-import { useEffect, useState } from "react";
-import { db } from "../firebase";
+import React, { useEffect, useState } from 'react';
 import {
   collection,
   getDocs,
-  updateDoc,
   doc,
-  deleteDoc,
-} from "firebase/firestore";
+  updateDoc,
+  query,
+  where,
+  limit,
+} from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
-export function AdminApprovePanel() {
-  const [images, setImages] = useState([]);
+const AdminApprovePanel = () => {
+  const [userDoc, setUserDoc] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [adminUid, setAdminUid] = useState(null);
+  const [error, setError] = useState('');
 
-  const fetchImages = async () => {
-    const snapshot = await getDocs(collection(db, "uploads"));
-    const items = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        approved: data.approved,
-        filename: data.filename, // you must save filename during upload
-      };
-    });
-    setImages(items);
-  };
-
-  const approveImage = async (id) => {
-    await updateDoc(doc(db, "uploads", id), { approved: true });
-    fetchImages();
-  };
-
-  const rejectImage = async (id) => {
-    // Just delete from Firestore – we assume client uploaded to "uploads/filename"
-    await deleteDoc(doc(db, "uploads", id));
-    fetchImages();
-  };
-
+  // Watch current logged-in admin
   useEffect(() => {
-    fetchImages();
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) setAdminUid(user.uid);
+      else setAdminUid(null);
+    });
+    return () => unsub();
   }, []);
 
-  const getImageURL = (filename) => {
-    const projectId = "your-project-id"; // 🔁 Replace this with your actual Firebase project ID
-    return `https://firebasestorage.googleapis.com/v0/b/${projectId}.appspot.com/o/uploads%2F${encodeURIComponent(
-      filename
-    )}?alt=media`;
+  // Auto fetch the first user with pending KYC
+  useEffect(() => {
+    const fetchPendingKyc = async () => {
+      setError('');
+      setStatusMessage('');
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('kycStatus', '==', 'Pending'),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const userSnap = querySnapshot.docs[0];
+          setUserDoc({ id: userSnap.id, ...userSnap.data() });
+        } else {
+          setError('No users found with pending KYC.');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Error fetching user.');
+      }
+    };
+
+    fetchPendingKyc();
+  }, []);
+
+  const updateStatus = async (status) => {
+    if (!userDoc) return;
+    try {
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        kycStatus: status,
+        kycReviewedAt: new Date().toISOString(),
+        kycReviewedBy: adminUid,
+      });
+      setUserDoc({ ...userDoc, kycStatus: status });
+      setStatusMessage(`KYC marked as "${status}"`);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to update status.');
+    }
   };
 
   return (
-    <div className="max-w-5xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
-      <h2 className="text-3xl font-bold mb-6 text-center">🧑‍💼 Admin Approval Panel</h2>
-      {images.length === 0 ? (
-        <p className="text-center text-gray-500">No uploads found.</p>
-      ) : (
-        <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6">
-          {images.map((img) => (
-            <div
-              key={img.id}
-              className="border rounded-lg p-3 shadow hover:shadow-md transition"
-            >
+    <div className="min-h-screen bg-gray-50 p-6 flex items-start justify-center">
+      <div className="w-full max-w-lg bg-white rounded-xl shadow-md p-6">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">KYC Review</h2>
+
+        {error && (
+          <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>
+        )}
+
+        {userDoc && (
+          <div>
+            <p className="text-sm text-gray-500 mb-2">
+              <strong>User ID:</strong> {userDoc.name}
+            </p>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Aadhaar Preview:</h3>
               <img
-                src={getImageURL(img.filename)}
-                alt="Upload"
-                className="rounded mb-2 w-full h-52 object-cover"
+                src={userDoc.aadhaarUrl}
+                alt="Aadhaar"
+                className="w-full max-h-80 object-contain rounded border"
               />
-              <p className="text-sm mb-1 text-gray-700">
-                Status:{" "}
-                <span
-                  className={img.approved ? "text-green-600" : "text-yellow-600"}
-                >
-                  {img.approved ? "✅ Approved" : "⏳ Pending"}
-                </span>
-              </p>
-              {!img.approved && (
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => approveImage(img.id)}
-                    className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => rejectImage(img.id)}
-                    className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
             </div>
-          ))}
-        </div>
-      )}
+
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>KYC Status:</strong>{' '}
+              <span
+                className={`font-semibold ${
+                  userDoc.kycStatus === 'Approved'
+                    ? 'text-green-600'
+                    : userDoc.kycStatus === 'Rejected'
+                    ? 'text-red-600'
+                    : 'text-yellow-600'
+                }`}
+              >
+                {userDoc.kycStatus || 'Not Submitted'}
+              </span>
+            </p>
+ {userDoc.role === "admin" && (
+            <div className="flex space-x-4 mt-4 justify-end">
+              <button
+                onClick={() => updateStatus('Approved')}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => updateStatus('Rejected')}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+              >
+                Reject
+              </button>
+            </div>
+ )}
+            {statusMessage && (
+              <div className="mt-4 text-green-700 bg-green-100 px-3 py-2 rounded text-sm">
+                {statusMessage}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default AdminApprovePanel;

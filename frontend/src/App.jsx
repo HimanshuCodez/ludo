@@ -18,7 +18,7 @@ import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
-import { AdminApprovePanel } from "./Admin/AdminApprovePanel";
+import AdminApprovePanel  from "./Admin/AdminApprovePanel";
 import Withdraw from "./pages/Withdraw";
 
 
