@@ -66,6 +66,11 @@ export function Menu() {
                                 <div className='flex items-center mr-2 pl-14'><img src={supportLogo} className='w-8'></img><p className='ml-[12px]'>Support</p></div>
                             </button>
                         </li>
+                        <li className='p-[4px] bg-menu-base'>
+                            <button onClick={() => navigate('/Support')} className=" text-white  font-roboto text-[17px] w-full">
+                                <div className='flex items-center mr-2 pl-14'><img src={supportLogo} className='w-8'></img><p className='ml-[12px]'>Admin</p></div>
+                            </button>
+                        </li>
                         <li className='p-[4px] bg-primary'>
                             <button onClick={() => setIsOpen(false)} className=" text-black  font-roboto text-[17px] w-full">
                                 <div className='flex items-center mr-2 pl-14'><img src={downloadLogo} className='w-8'></img><p className='ml-[12px]'>App Download</p></div>
