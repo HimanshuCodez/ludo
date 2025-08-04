@@ -7,7 +7,7 @@ import QRCode from 'react-qr-code';
 
 export function Pay() {
   const [amount] = useState(window.localStorage.getItem('Amount') || 0);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [timeLeft, setTimeLeft] = useState(240); // ⏱️ 4 minutes
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -15,10 +15,11 @@ export function Pay() {
   const auth = getAuth();
   const user = auth.currentUser;
   const transactionId = Date.now().toString();
-  const upiId = 'khushisantoshi21@okaxis';//change later
+  const upiId = 'khushisantoshi21@okaxis'; // update for production
 
+  // ⏳ Countdown timer
   useEffect(() => {
-    if (!timeLeft || timeLeft <= 0) {
+    if (timeLeft <= 0) {
       setPaymentStatus('expired');
       return;
     }
@@ -37,6 +38,7 @@ export function Pay() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
+  // ✅ Validate user and amount
   useEffect(() => {
     if (!user) {
       setError('Please log in to proceed with payment.');
@@ -58,9 +60,8 @@ export function Pay() {
   const upiString = `upi://pay?pa=${upiId}&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
 
   const handleProceedToConfirm = () => {
-    if (paymentStatus === 'pending') {
-      navigate('/PaymentConfirmation');
-    }
+    if (paymentStatus !== 'pending') return;
+    navigate('/PaymentConfirmation');
   };
 
   return (
@@ -92,7 +93,10 @@ export function Pay() {
 
             <button
               onClick={handleProceedToConfirm}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold transition duration-300"
+              disabled={paymentStatus !== 'pending'}
+              className={`w-full ${
+                paymentStatus === 'pending' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-500 cursor-not-allowed'
+              } text-white py-2 rounded-lg font-bold transition duration-300`}
             >
               I Have Completed Payment
             </button>
@@ -101,7 +105,7 @@ export function Pay() {
 
         {paymentStatus === 'expired' && (
           <div className="text-red-500 text-lg text-center mt-6">
-            ⚠️ Payment request expired.{' '}
+            ⚠️ Payment request expired after 4 minutes.{' '}
             <button onClick={() => navigate('/AddCash')} className="text-blue-300 underline ml-1">
               Try again
             </button>

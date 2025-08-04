@@ -105,6 +105,7 @@ export default function AuthPage() {
         name: name || "Anonymous",
         referral: referral || null,
         referralCode: generateReferralCode(),
+        role:"user",
         createdAt: new Date().toISOString(),
       });
     }

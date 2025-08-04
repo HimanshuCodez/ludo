@@ -1,11 +1,16 @@
-
 import React from 'react'
-import { auth } from '../firebase';
+
+import WinApprove from './WinApprove'
+import WithdrawAdmin from './AdminWithdraw'
+import AdminKycApprove from './AdminKycApprove'
+
 const Dashboard = () => {
   return (
     <div>
-      <h1>Welcome to Life Ludo 🧠</h1>
-      <button onClick={() => auth.signOut()}>Logout</button>
+        <WinApprove/>
+        <WithdrawAdmin/>
+       <AdminKycApprove/>
+        
     </div>
   )
 }

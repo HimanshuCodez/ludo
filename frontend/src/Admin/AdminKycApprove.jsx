@@ -11,7 +11,7 @@ import {
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-const AdminApprovePanel = () => {
+const AdminKycApprove = () => {
   const [userDoc, setUserDoc] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [adminUid, setAdminUid] = useState(null);
@@ -35,7 +35,7 @@ const AdminApprovePanel = () => {
         const q = query(
           collection(db, 'users'),
           where('kycStatus', '==', 'Pending'),
-          limit(1)
+          
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
@@ -135,4 +135,4 @@ const AdminApprovePanel = () => {
   );
 };
 
-export default AdminApprovePanel;
+export default AdminKycApprove;

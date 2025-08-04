@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import walletLogo from "../assets/wallet.png";
 import supportLogo from "../assets/support.png";
 import accountLogo from "../assets/account.png";
@@ -9,14 +10,54 @@ import historyLogo from "../assets/history.png";
 import referHistoryLogo from "../assets/referHistory.png";
 import notificationLogo from "../assets/notification.png";
 import policyLogo from "../assets/policy.png";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { CheckIcon } from "lucide-react";
 
+  import { doc, getDoc } from "firebase/firestore";
+import { db, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+
+
+
 export function Menu() {
+   const [userDoc, setUserDoc] = useState(null);
+ 
+    const [adminUid, setAdminUid] = useState(null);
+    const [error, setError] = useState('');
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
+ useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) setAdminUid(user.uid);
+      else setAdminUid(null);
+    });
+    return () => unsub();
+  }, []);
+
+
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserDoc({ id: userSnap.id, ...userSnap.data() });
+        } else {
+          setError("User document not found.");
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Error fetching user.");
+      }
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
+
+  //get user info
   return (
     <div>
       <div style={{ marginLeft: "40px", marginRight: "17px" }}>
@@ -42,15 +83,20 @@ export function Menu() {
               <button onClick={() => setIsOpen(false)} className="">
                 <img src={arrowL} alt="Close Menu" className="w-6 h-6" />
               </button>
+              <Link to={userDoc?.role === "admin" ? "/dashboard" : "/Profile"}>
               <button
-                onClick={() => navigate("/Profile")}
+               
                 className=" text-black bg-primary font-roboto text-[17px]"
               >
-                <div className="flex ml-[26px] items-center">
-                  <img src={accountLogo} className="w-8"></img>
-                  <p className="ml-[12px]">My Profile</p>
-                </div>
+               <div className="flex ml-[26px] items-center">
+  <img src={accountLogo} className="w-8" alt="Account" />
+  <p className="ml-[12px]">
+    {userDoc?.role === "admin" ? "Admin Dashboard" : "My Profile"}
+  </p>
+</div>
+               
               </button>
+              </Link>
             </div>
             <ul className="">
               <li className="p-[4px] bg-menu-base">

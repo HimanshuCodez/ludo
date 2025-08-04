@@ -18,8 +18,12 @@ import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
-import AdminApprovePanel  from "./Admin/AdminApprovePanel";
+
 import Withdraw from "./pages/Withdraw";
+
+import WinApprove from "./Admin/WinApprove";
+import WithdrawAdmin from "./Admin/AdminWithdraw";
+import AdminKycApprove from "./Admin/AdminKycApprove";
 
 
 
@@ -41,9 +45,11 @@ function App() {
           <Route path='/Support' element={<Support />} />
           <Route path='/Pay' element={<Pay />} />
           <Route path='/Matchmaking' element={<Matchmaking />} />
-          <Route path='/Kyc-Admin' element={<AdminApprovePanel/>} />
+          <Route path='/Kyc-Admin' element={<AdminKycApprove/>} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
           <Route path='/Withdraw' element={<Withdraw />} />
+          <Route path='/Withdraw-admin' element={<WithdrawAdmin />} />
+          <Route path='/Win-Approve' element={<WinApprove />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
         
           {/* Naya Route: GameRoom component ke liye dynamic route */}
