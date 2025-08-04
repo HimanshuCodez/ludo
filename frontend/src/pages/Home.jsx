@@ -93,7 +93,7 @@ export function Home() {
                 </div>
                 
                 <p className="text-emerald-300 text-sm font-semibold animate-pulse">
-                  🎯Snake Adventure Comming Soon
+                  🎯Comming Soon
                 </p>
               </div>
               

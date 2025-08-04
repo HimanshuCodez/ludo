@@ -19,6 +19,7 @@ import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
 import { AdminApprovePanel } from "./Admin/AdminApprovePanel";
+import Withdraw from "./pages/Withdraw";
 
 
 
@@ -42,6 +43,7 @@ function App() {
           <Route path='/Matchmaking' element={<Matchmaking />} />
           <Route path='/Kyc-Admin' element={<AdminApprovePanel/>} />
           <Route path='/Kyc-Verify' element={<KycVerify />} />
+          <Route path='/Withdraw' element={<Withdraw />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
         
           {/* Naya Route: GameRoom component ke liye dynamic route */}

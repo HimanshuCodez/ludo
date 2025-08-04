@@ -75,12 +75,14 @@ io.on('connection', (socket) => {
 
     const challenge = {
       id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-      name,
-      amount,
+      name:"himanshu",
+      amount:"90",
       createdBy: socket.id,
     };
 
     challenges.push(challenge);
+
+    
     socket.emit('yourChallengeId', challenge.id);
     updateAllQueues();
     console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
