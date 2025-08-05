@@ -102,23 +102,6 @@ async function deductFunds(uid1, uid2, amount) {
 
 loadMatchesFromFile();
 
-io.use(async (socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (token) {
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      socket.user = decodedToken;
-      next();
-    } catch (error) {
-      console.error("[Server] Authentication error:", error);
-      next(new Error("Authentication error"));
-    }
-  } else {
-    // Allow unauthenticated connections for now, but handle them in event handlers
-    next();
-  }
-});
-
 io.on('connection', (socket) => {
   console.log('✅ Socket connected:', socket.id);
 
@@ -126,7 +109,7 @@ io.on('connection', (socket) => {
   socket.emit('updateMatches', getClientMatches());
 
   socket.on('challenge:create', async (data, ack) => {
-    if (!socket.user) {
+    if (!data.uid) {
         socket.emit('error', { message: 'You must be logged in to create a challenge.' });
         if (ack) ack(false);
         return;
@@ -138,7 +121,7 @@ io.on('connection', (socket) => {
     }
 
     const amount = parseInt(data.amount);
-    const { uid, name } = socket.user;
+    const { uid, name } = data;
 
     if (isNaN(amount) || amount <= 0) {
       socket.emit('error', { message: 'Invalid challenge amount.' });
@@ -171,12 +154,12 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Cannot accept your own challenge.' });
       if (ack) ack(false); return;
     }
-    if (!socket.user) {
+    if (!data.uid) {
         socket.emit('error', { message: 'You must be logged in to accept a challenge.' });
         if (ack) ack(false); return;
     }
 
-    const deductionResult = await deductFunds(challenge.uid, socket.user.uid, challenge.amount);
+    const deductionResult = await deductFunds(challenge.uid, data.uid, challenge.amount);
     if (!deductionResult.success) {
         socket.emit('error', { message: `Transaction Failed: ${deductionResult.message}` });
         if (ack) ack(false); return;
@@ -188,7 +171,7 @@ io.on('connection', (socket) => {
     const match = {
       id: matchId,
       playerA: { id: challenge.createdBy, name: challenge.name, uid: challenge.uid },
-      playerB: { id: socket.id, name: socket.user.name, uid: socket.user.uid },
+      playerB: { id: socket.id, name: data.name, uid: data.uid },
       amount: challenge.amount,
       generatedRoomCode: "",
       roomCodeProvider: null,
