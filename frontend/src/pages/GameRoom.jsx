@@ -18,14 +18,14 @@ export function GameRoom() {
   const [copied, setCopied] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [userName, setUserName] = useState("Anonymous"); // Store user name
+  const [userName, setUserName] = useState("Anonymous");
+  const [gameAmount, setGameAmount] = useState(0);
   const socketRef = useRef(null);
   const retryCount = useRef(0);
   const auth = getAuth();
   const user = auth.currentUser;
 
   useEffect(() => {
-    // Fetch user name from Firestore
     const fetchUserData = async () => {
       if (user) {
         try {
@@ -65,6 +65,7 @@ export function GameRoom() {
     socket.on("roomStateUpdate", (data) => {
       console.log(`[Client] Received roomStateUpdate:`, data);
       setPlayers(data.players.filter((p) => p && p.id));
+      setGameAmount(data.amount || 0);
       if (data.generatedRoomCode && data.generatedRoomCode !== generatedRoomCode) {
         setGeneratedRoomCode(data.generatedRoomCode);
         setGameStarted(true);
@@ -212,16 +213,15 @@ export function GameRoom() {
     }
   };
 
-  const handleGameResult = (result) => {
+  const handleGameResult = (result, proofUrl) => {
     console.log(`[Client] Submitting game result ${result} for room ${roomId}`);
-    socketRef.current.emit("submitGameResult", { roomId, result });
+    socketRef.current.emit("submitGameResult", { roomId, result, proofUrl });
     setGameLog((prev) => [...prev, `Game Result Submitted: ${result}`]);
-    alert(`You submitted: ${result}. Awaiting opponent's submission.`);
+    alert(`You submitted: ${result}. Your proof has been uploaded and is pending review.`);
   };
 
   const myPlayer = players.find((p) => p.id === myPlayerId);
   const opponentPlayer = players.find((p) => p.id !== myPlayerId);
-  const gameAmount = myPlayer?.amount || "N/A";
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
@@ -316,7 +316,7 @@ export function GameRoom() {
               </div>
             </div>
 
-            <GameResultBox gameStarted={true} />
+            <GameResultBox gameStarted={true} onResultSubmit={handleGameResult} />
           </div>
 
           <div className="mt-6">
@@ -337,9 +337,9 @@ export function GameRoom() {
               <ul className="max-h-32 sm:max-h-40 overflow-y-auto text-xs sm:text-sm">
                 {gameLog.length > 0
                   ? gameLog.slice(-8).map((log, idx) => (
-                      <li className="text-gray-700 py-0.5" key={idx}>
-                        {log}
-                      </li>
+                      <li className="text-gray-700 py-0.5" key={idx}>{
+                        log
+                      }</li>
                     ))
                   : <li className="text-gray-400">Waiting for events...</li>}
               </ul>

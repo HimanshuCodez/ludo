@@ -8,12 +8,10 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import admin from "./firebaseAdmin.js";
 
-
 dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
- 
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -33,7 +31,6 @@ app.use(express.json());
 
 let challenges = [];
 let matches = [];
-
 const MATCHES_FILE_PATH = path.join(__dirname, 'matches.json');
 
 async function saveMatchesToFile() {
@@ -56,7 +53,21 @@ async function loadMatchesFromFile() {
   }
 }
 
+async function saveMatchToFirestore(match) {
+    try {
+        const db = admin.firestore();
+        await db.collection('matches').doc(match.id).set(match);
+        console.log(`[Server] Match ${match.id} saved to Firestore.`);
+    } catch (error) {
+        console.error(`[Server] Error saving match to Firestore:`, error);
+    }
+}
+
 async function deductFunds(uid1, uid2, amount) {
+    if (!uid1 || !uid2) {
+        console.error(`[Server] Error deducting funds: Invalid UID provided.`);
+        return false;
+    }
     const db = admin.firestore();
     const user1Ref = db.collection('users').doc(uid1);
     const user2Ref = db.collection('users').doc(uid2);
@@ -86,6 +97,7 @@ async function deductFunds(uid1, uid2, amount) {
       console.log(`[Server] Successfully deducted ${amount} from users ${uid1} and ${uid2}`);
       return true;
     } catch (error) {
+      console.error(`[Server] Error in Firestore transaction for users ${uid1}, ${uid2}:`, error);
       console.error(`[Server] Error deducting funds: ${error.message}`);
       return false;
     }
@@ -114,8 +126,6 @@ io.on('connection', (socket) => {
       if (ack) ack(false);
       return;
     }
-
-
 
     const challenge = {
       id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
@@ -154,8 +164,6 @@ io.on('connection', (socket) => {
 
     challenges = challenges.filter(c => c.id !== data.challengeId);
 
- 
-
     const matchId = "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
 
     const match = {
@@ -166,12 +174,13 @@ io.on('connection', (socket) => {
       generatedRoomCode: "",
       roomCodeProvider: null,
       playerResults: {},
+      status: 'active',
     };
 
     matches.push(match);
     console.log(`[Server] Match created: ${match.id} between ${match.playerA.name} and ${match.playerB.name} for ₹${match.amount}`);
-    console.log(`[Server] Matches array:`, matches.map(m => m.id));
-
+    
+    await saveMatchToFirestore(match);
     await saveMatchesToFile();
     updateAllQueues();
 
@@ -185,7 +194,6 @@ io.on('connection', (socket) => {
     const match = matches.find(m => m.id === roomId);
     if (!match) {
       console.log(`[❌ Server] Room NOT FOUND for ID: ${roomId}`);
-      console.log(`[Server] Current matches:`, matches.map(m => m.id));
       socket.emit('roomNotFound', { message: 'Room not found.' });
       return;
     }
@@ -193,11 +201,9 @@ io.on('connection', (socket) => {
     console.log(`[Server] ${userName} (socket: ${socket.id}) joined room: ${roomId}`);
     socket.join(roomId);
 
-    const socketsInRoom = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
-    console.log(`[Server] Sockets in room ${roomId}:`, socketsInRoom);
-
     const roomData = {
       players: [match.playerA, match.playerB].filter(p => p && p.id),
+      amount: match.amount,
       generatedRoomCode: match.generatedRoomCode,
       roomCodeProvider: match.roomCodeProvider,
     };
@@ -213,47 +219,62 @@ io.on('connection', (socket) => {
     const match = matches.find(m => m.id === roomId);
     if (!match) {
       socket.emit('error', { message: 'Room not found.' });
-      console.log(`[❌ Server] Room not found for userProvidedRoomCode: ${roomId}`);
       return;
     }
 
     if (!/^\d{8}$/.test(code)) {
       socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
-      console.log(`[❌ Server] Invalid room code ${code} for room ${roomId}`);
       return;
     }
 
     if (match.generatedRoomCode && match.roomCodeProvider !== socket.id) {
       socket.emit('error', { message: 'Room code already provided by another player.' });
-      console.log(`[❌ Server] Room code already provided for room ${roomId}`);
       return;
     }
 
-    const socketsInRoom = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
-    console.log(`[Server] Sockets in room ${roomId} before emitting code ${code}:`, socketsInRoom);
-
     match.generatedRoomCode = code;
     match.roomCodeProvider = socket.id;
+    await saveMatchToFirestore(match);
     await saveMatchesToFile();
 
     io.to(roomId).emit('userProvidedRoomCode', code);
     io.to(roomId).emit('roomStateUpdate', {
       players: [match.playerA, match.playerB].filter(p => p && p.id),
+      amount: match.amount,
       generatedRoomCode: code,
       roomCodeProvider: socket.id,
     });
     console.log(`[Server] Room code ${code} provided by socket ${socket.id} for room ${roomId}`);
   });
 
-  socket.on('submitGameResult', async ({ roomId, result }) => {
+  socket.on('submitGameResult', async ({ roomId, result, proofUrl }) => {
     const match = matches.find(m => m.id === roomId);
     if (!match) {
       socket.emit('error', { message: 'Room not found.' });
-      console.log(`[❌ Server] Room not found for submitGameResult: ${roomId}`);
       return;
     }
 
-    match.playerResults[socket.id] = result;
+    const player = match.playerA.id === socket.id ? match.playerA : match.playerB;
+    if (player && player.uid) {
+        try {
+            const userRef = admin.firestore().collection('users').doc(player.uid);
+            await userRef.update({
+                lastGameProofUrl: proofUrl,
+                lastGameResult: result,
+                lastMatchId: roomId,
+                lastMatchAmount: match.amount,
+                winStatus: 'Pending',
+            });
+            console.log(`[Server] Updated game result proof for user ${player.uid}`);
+        } catch (error) {
+            console.error(`[Server] Error updating user doc with game proof:`, error);
+            socket.emit('error', { message: 'Error submitting result. Please try again.' });
+            return;
+        }
+    }
+
+    match.playerResults[socket.id] = { result, proofUrl };
+    await saveMatchToFirestore(match);
     await saveMatchesToFile();
     io.to(roomId).emit('gameResultUpdate', match.playerResults);
     console.log(`[Server] Game result submitted by ${socket.id} for room ${roomId}: ${result}`);
