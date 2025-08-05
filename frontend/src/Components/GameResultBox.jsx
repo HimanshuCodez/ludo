@@ -5,7 +5,7 @@ import { db, storage, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function GameResultComponent({ gameStarted }) {
-  const [timeLeft, setTimeLeft] = useState(20 * 60);
+  const [timeLeft, setTimeLeft] = useState(1 * 60);
   const [showResultBox, setShowResultBox] = useState(false);
   const [gameResult, setGameResult] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);

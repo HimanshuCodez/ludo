@@ -19,7 +19,7 @@ export function GameRoom() {
   const retryCount = useRef(0);
 
   useEffect(() => {
-    const socket = io("https://ludo-p65v.onrender.com/", {
+    const socket = io("http://", {
       transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: 10,

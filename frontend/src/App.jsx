@@ -35,7 +35,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path='/' element={<AuthPage />} />
-           
+           ]
         <Route path="/home" element={ <PrivateRoute><Home /></PrivateRoute>} />
           <Route path='/Profile' element={<Profile />} />
           <Route path='/AddCash' element={<AddCash />} />
