@@ -10,7 +10,7 @@ export function Footer() {
 
     return <div>
         <div className='bg-primary fixed bottom-0 w-full h-[52px] grid grid-cols-5 place-content-between px-4 py-2'>
-            <button className='font-roboto flex flex-col items-center text-[12px]' onClick={() => navigate('/')}>
+            <button className='font-roboto flex flex-col items-center text-[12px]' onClick={() => navigate('/home')}>
                 <img src={homeLogo} alt="" className='' />
                 <p>Home</p>
             </button>

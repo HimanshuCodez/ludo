@@ -45,29 +45,32 @@ export default function GameResultComponent({ gameStarted }) {
     return `${m}:${s}`;
   };
 
-  const handleFileUpload = async (file) => {
-    if (!file || !userId) return;
+ const handleFileUpload = async (file) => {
+  if (!file || !userId) return;
 
-    const fileRef = ref(storage, `gameProofs/${userId}_${Date.now()}.jpg`);
-    setUploading(true);
-    setUploadError('');
+  // ✅ Correct path that matches Firebase Storage rules
+  const fileRef = ref(storage, `gameProofs/${userId}/${Date.now()}.jpg`);
 
-    try {
-      await uploadBytes(fileRef, file);
-      const downloadURL = await getDownloadURL(fileRef);
-      await updateDoc(doc(db, 'users', userId), {
-        lastGameProofUrl: downloadURL,
-        lastGameResult: 'I WON',
-        lastGameAt: new Date().toISOString(),
-      });
-      setUploading(false);
-      setShowSuccess(true);
-    } catch (err) {
-      console.error(err);
-      setUploadError('Upload failed. Please try again.');
-      setUploading(false);
-    }
-  };
+  setUploading(true);
+  setUploadError('');
+
+  try {
+    await uploadBytes(fileRef, file);
+    const downloadURL = await getDownloadURL(fileRef);
+    await updateDoc(doc(db, 'users', userId), {
+      lastGameProofUrl: downloadURL,
+      lastGameResult: 'I WON',
+      lastGameAt: new Date().toISOString(),
+    });
+    setUploading(false);
+    setShowSuccess(true);
+  } catch (err) {
+    console.error(err);
+    setUploadError('Upload failed. Please try again.');
+    setUploading(false);
+  }
+};
+
 
   const handleGameResult = (result) => {
     setGameResult(result);
