@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -113,7 +114,8 @@ export function Matchmaking() {
         console.log(`[Client] Creating challenge for ₹${amount} by ${userName}`);
         socketRef.current.emit("challenge:create", { 
           amount, 
-          uid: user?.uid || '' 
+          uid: user?.uid || '' ,
+          name: userName
         }, (success) => {
           setLoading(false);
           if (!success) {
@@ -136,7 +138,7 @@ export function Matchmaking() {
       socketRef.current.emit("challenge:accept", { 
         challengeId, 
         uid: user?.uid || '' ,
-        name: user?.uid.name || '' 
+        name: userName
       }, (success) => {
         setLoading(false);
         if (!success) {

@@ -1,6 +1,4 @@
 import express from "express";
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
@@ -8,18 +6,13 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { db } from "../frontend/src/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { useState } from "react";
-import { getAuth } from "firebase/auth";
+import admin from "./firebaseAdmin.js";
+
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-const [userName, setUserName] = useState("Anonymous"); 
+ 
 
 const app = express();
 const server = http.createServer(app);
@@ -63,6 +56,41 @@ async function loadMatchesFromFile() {
   }
 }
 
+async function deductFunds(uid1, uid2, amount) {
+    const db = admin.firestore();
+    const user1Ref = db.collection('users').doc(uid1);
+    const user2Ref = db.collection('users').doc(uid2);
+  
+    try {
+      await db.runTransaction(async (transaction) => {
+        const user1Doc = await transaction.get(user1Ref);
+        const user2Doc = await transaction.get(user2Ref);
+  
+        if (!user1Doc.exists || !user2Doc.exists) {
+          throw new Error('One or both users not found');
+        }
+  
+        const user1Data = user1Doc.data();
+        const user2Data = user2Doc.data();
+  
+        const newBalance1 = (user1Data.depositChips || 0) - amount;
+        const newBalance2 = (user2Data.depositChips || 0) - amount;
+  
+        if (newBalance1 < 0 || newBalance2 < 0) {
+          throw new Error('Insufficient funds for one or both users.');
+        }
+  
+        transaction.update(user1Ref, { depositChips: newBalance1 });
+        transaction.update(user2Ref, { depositChips: newBalance2 });
+      });
+      console.log(`[Server] Successfully deducted ${amount} from users ${uid1} and ${uid2}`);
+      return true;
+    } catch (error) {
+      console.error(`[Server] Error deducting funds: ${error.message}`);
+      return false;
+    }
+  }
+
 loadMatchesFromFile();
 
 io.on('connection', (socket) => {
@@ -79,7 +107,7 @@ io.on('connection', (socket) => {
     }
 
     const amount = parseInt(data.amount);
-    const uid = data.uid;
+    const { uid, name } = data;
 
     if (isNaN(amount) || amount <= 0) {
       socket.emit('error', { message: 'Invalid challenge amount.' });
@@ -87,33 +115,14 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Fetch user name from Firestore
-  const fetchUserData = async () => {
-        if (user) {
-          try {
-            const userRef = doc(db, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-              const userData = userSnap.data();
-              setUserName(userData.name || 'Anonymous');
-            } else {
-              setUserName('Anonymous');
-            }
-          } catch (error) {
-            console.error('Error fetching user data:', error);
-            setUserName('Anonymous');
-          }
-        }
-      };
-  
-      fetchUserData();
+
 
     const challenge = {
       id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-      name:userName.name,
       amount,
       createdBy: socket.id,
       uid,
+      name,
     };
 
     challenges.push(challenge);
@@ -136,28 +145,23 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const fundsDeducted = await deductFunds(challenge.uid, data.uid, challenge.amount);
+    if (!fundsDeducted) {
+        socket.emit('error', { message: 'Failed to process transaction. Please check balances.' });
+        if (ack) ack(false);
+        return;
+    }
+
     challenges = challenges.filter(c => c.id !== data.challengeId);
 
-    // Fetch accepter's name from Firestore
-    let playerBName = 'Anonymous';
-    if (data.uid) {
-      try {
-        const userRef = db.collection('users').doc(data.uid);
-        const userSnap = await userRef.get();
-        if (userSnap.exists) {
-          playerBName = userSnap.data().name || 'Anonymous';
-        }
-      } catch (err) {
-        console.error('[Server] Error fetching accepter name:', err.message);
-      }
-    }
+ 
 
     const matchId = "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
 
     const match = {
       id: matchId,
       playerA: { id: challenge.createdBy, name: challenge.name, uid: challenge.uid },
-      playerB: { id: socket.id, name: playerBName, uid: data.uid },
+      playerB: { id: socket.id, name: data.name, uid: data.uid },
       amount: challenge.amount,
       generatedRoomCode: "",
       roomCodeProvider: null,
