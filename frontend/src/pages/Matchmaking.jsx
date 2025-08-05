@@ -3,9 +3,10 @@ import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { collection, doc, getDoc } from "firebase/firestore";
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -19,12 +20,46 @@ export function Matchmaking() {
   const auth = getAuth();
   const user = auth.currentUser;
 
+
+// ...inside Matchmaking component
+const [userDetails, setUserDetails] = useState({});
+
+// Fetch user data for each challenge
+useEffect(() => {
+  const fetchUserDetails = async () => {
+    const details = {};
+    const userIds = [...new Set(challenges.map((ch) => ch.createdBy))];
+
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            details[uid] = {
+              name: data.name || `Player_${uid.slice(0, 4)}`,
+              depositChips: data.depositChips || 0,
+            };
+          }
+        } catch (e) {
+          console.error("Error fetching user details:", e);
+        }
+      })
+    );
+
+    setUserDetails(details);
+  };
+
+  if (challenges.length > 0) {
+    fetchUserDetails();
+  }
+}, [challenges])
   useEffect(() => {
     // Fetch user balance
     const fetchBalance = async () => {
       if (user) {
         try {
-          const userRef = doc(db, 'users', user.uid);
+          const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
             const userData = userSnap.data();
@@ -33,7 +68,7 @@ export function Matchmaking() {
             setBalance(0);
           }
         } catch (error) {
-          console.error('Error fetching balance:', error);
+          console.error("Error fetching balance:", error);
           setBalance(0);
         }
       }
@@ -151,7 +186,9 @@ export function Matchmaking() {
       <Header />
       <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
-          <div className="text-gray-700 mb-3">Your Balance: ₹{balance.toFixed(2)}</div>
+          <div className="text-gray-700 mb-3">
+            Your Balance: ₹{balance.toFixed(2)}
+          </div>
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
@@ -170,7 +207,9 @@ export function Matchmaking() {
             <button
               type="submit"
               className={`h-12 px-8 rounded-r text-white font-bold text-lg ${
-                loading || myChallengeId ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-800"
+                loading || myChallengeId
+                  ? "bg-gray-400"
+                  : "bg-blue-600 hover:bg-blue-800"
               }`}
               disabled={loading || myChallengeId}
             >
@@ -188,44 +227,72 @@ export function Matchmaking() {
           <h2 className="text-xl font-bold text-center mb-3">Challenges</h2>
           <div className="bg-white rounded shadow px-3 pt-1 pb-2">
             {challenges.length === 0 && (
-              <div className="text-gray-400 py-3 text-center">No open challenges...</div>
+              <div className="text-gray-400 py-3 text-center">
+                No open challenges...
+              </div>
             )}
             <ul>
-              {challenges.map((ch) => (
-                <li
-                  key={ch.id}
-                  className={`flex items-center justify-between border-b last:border-b-0 py-2 ${
-                    ch.own ? "bg-blue-50" : ""
-                  }`}
-                >
-                  <span className="font-semibold">{ch.name}</span>
-                  <span className="text-green-700 font-bold">₹{ch.amount}</span>
-                  {!ch.own && (
-                    <button
-                      className="ml-3 px-4 py-1 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
-                      onClick={() => handlePlay(ch.id)}
-                      disabled={loading}
-                    >
-                      Play
-                    </button>
-                  )}
-                  {ch.own && <span className="ml-3 text-xs text-gray-500">(waiting)</span>}
-                </li>
-              ))}
+              {challenges.map((ch) => {
+                const user = userDetails[ch.createdBy] || {
+                  name: ch.name || "Loading...",
+                  depositChips: 0,
+                };
+
+                return (
+                  <li
+                    key={ch.id}
+                    className={`flex items-center justify-between border-b last:border-b-0 py-2 ${
+                      ch.own ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <div>
+                      <div className="font-semibold">{user.name}</div>
+                      <div className="text-xs text-gray-500">
+                        Balance: ₹{parseFloat(user.depositChips).toFixed(2)}
+                      </div>
+                    </div>
+                    <span className="text-green-700 font-bold">
+                      ₹{ch.amount}
+                    </span>
+                    {!ch.own && (
+                      <button
+                        className="ml-3 px-4 py-1 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
+                        onClick={() => handlePlay(ch.id)}
+                        disabled={loading}
+                      >
+                        Play
+                      </button>
+                    )}
+                    {ch.own && (
+                      <span className="ml-3 text-xs text-gray-500">
+                        (waiting)
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
+          <h2 className="text-xl font-bold text-center mb-3">
+            Ongoing Matches
+          </h2>
           <div className="bg-white rounded shadow px-3 py-2">
             {matches.length === 0 ? (
-              <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
+              <div className="text-gray-400 py-2 text-center">
+                No ongoing matches...
+              </div>
             ) : (
               <ul>
                 {matches.map((m, i) => (
                   <li key={m.id || i}>
-                    <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
+                    <VSRow
+                      playerA={m.playerA}
+                      playerB={m.playerB}
+                      amount={m.amount}
+                    />
                   </li>
                 ))}
               </ul>
