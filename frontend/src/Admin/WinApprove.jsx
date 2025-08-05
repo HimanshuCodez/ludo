@@ -33,7 +33,7 @@ const WinApprove = () => {
       try {
         const q = query(
           collection(db, 'users'),
-          where('winProofUrl', '!=', '') // fetch users who submitted proof
+          where('lastGameProofUrl', '!=', '') // fetch users who submitted proof
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
@@ -88,7 +88,7 @@ const WinApprove = () => {
             <div className="mb-4">
               <h3 className="text-lg font-medium text-gray-700 mb-2">Win Screenshot:</h3>
               <img
-                src={userDoc.winProofUrl}
+                src={userDoc.lastGameProofUrl}
                 alt="Win Screenshot"
                 className="w-full max-h-96 object-contain rounded border"
               />

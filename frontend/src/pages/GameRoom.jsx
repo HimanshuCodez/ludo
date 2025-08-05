@@ -4,6 +4,9 @@ import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
 import GameResultBox from "../Components/GameResultBox";
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export function GameRoom() {
   const { roomId } = useParams();
@@ -15,11 +18,35 @@ export function GameRoom() {
   const [copied, setCopied] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [userName, setUserName] = useState("Anonymous"); // Store user name
   const socketRef = useRef(null);
   const retryCount = useRef(0);
+  const auth = getAuth();
+  const user = auth.currentUser;
 
   useEffect(() => {
-    const socket = io("http://", {
+    // Fetch user name from Firestore
+    const fetchUserData = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setUserName(userData.name || 'Anonymous');
+          } else {
+            setUserName('Anonymous');
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUserName('Anonymous');
+        }
+      }
+    };
+
+    fetchUserData();
+
+    const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -30,10 +57,9 @@ export function GameRoom() {
 
     socket.on("connect", () => {
       setMyPlayerId(socket.id);
-      const userName = "User_" + Math.floor(Math.random() * 1000);
       console.log(`[Client] Connected as ${socket.id}, joining room ${roomId} as ${userName}`);
       retryCount.current = 0; // Reset retry count on connect
-      socket.emit("joinRoom", { roomId, userName });
+      socket.emit("joinRoom", { roomId, userName, uid: user?.uid || '' });
     });
 
     socket.on("roomStateUpdate", (data) => {
@@ -78,11 +104,10 @@ export function GameRoom() {
       console.log(`[Client] Room not found: ${message}`);
       if (retryCount.current < 5) {
         retryCount.current += 1;
-        const delay = Math.pow(2, retryCount.current) * 1000; // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+        const delay = Math.pow(2, retryCount.current) * 1000; // Exponential backoff
         setTimeout(() => {
-          const userName = "User_" + Math.floor(Math.random() * 1000);
           console.log(`[Client] Retrying joinRoom (${retryCount.current}/5) for room ${roomId}`);
-          socket.emit("joinRoom", { roomId, userName });
+          socket.emit("joinRoom", { roomId, userName, uid: user?.uid || '' });
         }, delay);
       } else {
         alert("Room not found. Please try again or create a new match.");
@@ -103,12 +128,10 @@ export function GameRoom() {
       console.log("[Client] Reconnected to server");
       setGameLog((prev) => [...prev, "Reconnected to server."]);
       retryCount.current = 0;
-      const userName = "User_" + Math.floor(Math.random() * 1000);
-      socket.emit("joinRoom", { roomId, userName });
+      socket.emit("joinRoom", { roomId, userName, uid: user?.uid || '' });
     });
 
     return () => {
-      // Remove socket.disconnect() to persist connection
       socket.off("connect");
       socket.off("roomStateUpdate");
       socket.off("userProvidedRoomCode");
@@ -120,7 +143,7 @@ export function GameRoom() {
       socket.off("disconnect");
       socket.off("reconnect");
     };
-  }, [roomId]);
+  }, [roomId, user, userName]);
 
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
@@ -196,8 +219,8 @@ export function GameRoom() {
     alert(`You submitted: ${result}. Awaiting opponent's submission.`);
   };
 
-  const myPlayer = players.find((p) => p.socketId === myPlayerId);
-  const opponentPlayer = players.find((p) => p.socketId !== myPlayerId);
+  const myPlayer = players.find((p) => p.id === myPlayerId);
+  const opponentPlayer = players.find((p) => p.id !== myPlayerId);
   const gameAmount = myPlayer?.amount || "N/A";
 
   return (
@@ -208,9 +231,9 @@ export function GameRoom() {
           <div className="flex items-center justify-between w-full p-3 rounded-2xl shadow bg-gradient-to-tr from-blue-100 via-white to-blue-50 mt-0 md:mt-2 gap-3">
             <div className="flex flex-col items-center w-1/3">
               <div className="w-10 h-10 sm:w-14 sm:h-14 bg-blue-400 rounded-full flex items-center justify-center text-white text-base sm:text-xl font-bold mb-1">
-                {myPlayer?.name?.charAt(0) || "U"}
+                {userName.charAt(0) || "U"}
               </div>
-              <div className="font-semibold text-gray-800 text-sm sm:text-base">{myPlayer?.name || "You"}</div>
+              <div className="font-semibold text-gray-800 text-sm sm:text-base">{userName}</div>
               <div className="text-xs text-gray-500">You</div>
             </div>
             <div className="w-1/3 text-center flex flex-col items-center">
@@ -328,3 +351,4 @@ export function GameRoom() {
     </div>
   );
 }
+

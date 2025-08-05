@@ -1,17 +1,26 @@
 import express from "express";
-import mongoose from "mongoose";
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-
 import path from "path";
 import fs from 'fs/promises';
-
 import { fileURLToPath } from 'url';
+import { db } from "../frontend/src/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { useState } from "react";
+import { getAuth } from "firebase/auth";
+
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+const [userName, setUserName] = useState("Anonymous"); 
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -28,12 +37,6 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-
-
-// Routes
-
-
 
 let challenges = [];
 let matches = [];
@@ -68,15 +71,15 @@ io.on('connection', (socket) => {
   socket.emit('updateChallenges', getClientChallenges(socket.id));
   socket.emit('updateMatches', getClientMatches());
 
-  socket.on('challenge:create', (data, ack) => {
+  socket.on('challenge:create', async (data, ack) => {
     if (challenges.find(c => c.createdBy === socket.id)) {
       socket.emit('error', { message: 'You already have an active challenge.' });
       if (ack) ack(false);
       return;
     }
 
-    const name = data.name || `Player_${socket.id.substring(0, 4)}`;
     const amount = parseInt(data.amount);
+    const uid = data.uid;
 
     if (isNaN(amount) || amount <= 0) {
       socket.emit('error', { message: 'Invalid challenge amount.' });
@@ -84,16 +87,36 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Fetch user name from Firestore
+  const fetchUserData = async () => {
+        if (user) {
+          try {
+            const userRef = doc(db, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              setUserName(userData.name || 'Anonymous');
+            } else {
+              setUserName('Anonymous');
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+            setUserName('Anonymous');
+          }
+        }
+      };
+  
+      fetchUserData();
+
     const challenge = {
       id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-      name,
+      name:userName.name,
       amount,
       createdBy: socket.id,
+      uid,
     };
 
     challenges.push(challenge);
-
-
     socket.emit('yourChallengeId', challenge.id);
     updateAllQueues();
     console.log(`[Server] Challenge created: ${challenge.id} by ${name} for ₹${amount}`);
@@ -115,13 +138,26 @@ io.on('connection', (socket) => {
 
     challenges = challenges.filter(c => c.id !== data.challengeId);
 
-    const playerBName = data.name || `Player_${socket.id.substring(0, 4)}`;
+    // Fetch accepter's name from Firestore
+    let playerBName = 'Anonymous';
+    if (data.uid) {
+      try {
+        const userRef = db.collection('users').doc(data.uid);
+        const userSnap = await userRef.get();
+        if (userSnap.exists) {
+          playerBName = userSnap.data().name || 'Anonymous';
+        }
+      } catch (err) {
+        console.error('[Server] Error fetching accepter name:', err.message);
+      }
+    }
+
     const matchId = "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
 
     const match = {
       id: matchId,
-      playerA: { id: challenge.createdBy, name: challenge.name },
-      playerB: { id: socket.id, name: playerBName },
+      playerA: { id: challenge.createdBy, name: challenge.name, uid: challenge.uid },
+      playerB: { id: socket.id, name: playerBName, uid: data.uid },
       amount: challenge.amount,
       generatedRoomCode: "",
       roomCodeProvider: null,
@@ -262,6 +298,7 @@ io.on('connection', (socket) => {
     }));
   }
 });
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT);

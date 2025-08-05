@@ -14,14 +14,15 @@ export function Matchmaking() {
   const [myChallengeId, setMyChallengeId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(0);
+  const [userName, setUserName] = useState("Anonymous"); // Store user name
   const socketRef = useRef(null);
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
 
   useEffect(() => {
-    // Fetch user balance
-    const fetchBalance = async () => {
+    // Fetch user balance and name
+    const fetchUserData = async () => {
       if (user) {
         try {
           const userRef = doc(db, 'users', user.uid);
@@ -29,17 +30,20 @@ export function Matchmaking() {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setBalance(parseFloat(userData.depositChips) || 0);
+            setUserName(userData.name || 'Anonymous');
           } else {
             setBalance(0);
+            setUserName('Anonymous');
           }
         } catch (error) {
-          console.error('Error fetching balance:', error);
+          console.error('Error fetching user data:', error);
           setBalance(0);
+          setUserName('Anonymous');
         }
       }
     };
 
-    fetchBalance();
+    fetchUserData();
 
     // Socket.IO setup
     const socket = io("https://ludo-p65v.onrender.com/", {
@@ -106,8 +110,11 @@ export function Matchmaking() {
     if (challengeAmount > 0) {
       if (balance >= challengeAmount) {
         setLoading(true);
-        console.log(`[Client] Creating challenge for ₹${amount}`);
-        socketRef.current.emit("challenge:create", { amount }, (success) => {
+        console.log(`[Client] Creating challenge for ₹${amount} by ${userName}`);
+        socketRef.current.emit("challenge:create", { 
+          amount, 
+          uid: user?.uid || '' 
+        }, (success) => {
           setLoading(false);
           if (!success) {
             alert("Failed to create challenge.");
@@ -126,7 +133,11 @@ export function Matchmaking() {
     if (challenge && balance >= challenge.amount) {
       setLoading(true);
       console.log(`[Client] Accepting challenge ${challengeId}`);
-      socketRef.current.emit("challenge:accept", { challengeId }, (success) => {
+      socketRef.current.emit("challenge:accept", { 
+        challengeId, 
+        uid: user?.uid || '' ,
+        name: user?.uid.name || '' 
+      }, (success) => {
         setLoading(false);
         if (!success) {
           alert("Failed to accept challenge.");
@@ -151,6 +162,7 @@ export function Matchmaking() {
       <Header />
       <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
+          <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
           <div className="text-gray-700 mb-3">Your Balance: ₹{balance.toFixed(2)}</div>
           <form
             className="flex items-center gap-2"
