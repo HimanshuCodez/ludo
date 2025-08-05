@@ -25,7 +25,6 @@ const io = new Server(server, {
   },
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -36,7 +35,6 @@ const MATCHES_FILE_PATH = path.join(__dirname, 'matches.json');
 async function saveMatchesToFile() {
   try {
     await fs.writeFile(MATCHES_FILE_PATH, JSON.stringify(matches, null, 2));
-    console.log(`[Server] Matches saved to file: ${matches.length} matches`);
   } catch (err) {
     console.error(`[Server] Error saving matches: ${err.message}`);
   }
@@ -48,7 +46,7 @@ async function loadMatchesFromFile() {
     matches = JSON.parse(data);
     console.log(`[Server] Loaded ${matches.length} matches from file.`);
   } catch (err) {
-    console.log('[Server] Error loading matches file:', err.message);
+    console.log('[Server] No existing matches file found. Starting fresh.');
     matches = [];
   }
 }
@@ -65,8 +63,7 @@ async function saveMatchToFirestore(match) {
 
 async function deductFunds(uid1, uid2, amount) {
     if (!uid1 || !uid2) {
-        console.error(`[Server] Error deducting funds: Invalid UID provided.`);
-        return false;
+        return { success: false, message: 'Invalid user identifier. A user may not be logged in.' };
     }
     const db = admin.firestore();
     const user1Ref = db.collection('users').doc(uid1);
@@ -78,7 +75,7 @@ async function deductFunds(uid1, uid2, amount) {
         const user2Doc = await transaction.get(user2Ref);
   
         if (!user1Doc.exists || !user2Doc.exists) {
-          throw new Error('One or both users not found');
+          throw new Error('One or both users not found in the database.');
         }
   
         const user1Data = user1Doc.data();
@@ -88,20 +85,20 @@ async function deductFunds(uid1, uid2, amount) {
         const newBalance2 = (user2Data.depositChips || 0) - amount;
   
         if (newBalance1 < 0 || newBalance2 < 0) {
-          throw new Error('Insufficient funds for one or both users.');
+            if (newBalance1 < 0) throw new Error(`Insufficient funds for ${user1Data.name}.`);
+            throw new Error(`Insufficient funds for ${user2Data.name}.`);
         }
   
         transaction.update(user1Ref, { depositChips: newBalance1 });
         transaction.update(user2Ref, { depositChips: newBalance2 });
       });
       console.log(`[Server] Successfully deducted ${amount} from users ${uid1} and ${uid2}`);
-      return true;
+      return { success: true };
     } catch (error) {
       console.error(`[Server] Error in Firestore transaction for users ${uid1}, ${uid2}:`, error);
-      console.error(`[Server] Error deducting funds: ${error.message}`);
-      return false;
+      return { success: false, message: error.message || 'A database error occurred.' };
     }
-  }
+}
 
 loadMatchesFromFile();
 
@@ -112,6 +109,11 @@ io.on('connection', (socket) => {
   socket.emit('updateMatches', getClientMatches());
 
   socket.on('challenge:create', async (data, ack) => {
+    if (!data.uid) {
+        socket.emit('error', { message: 'You must be logged in to create a challenge.' });
+        if (ack) ack(false);
+        return;
+    }
     if (challenges.find(c => c.createdBy === socket.id)) {
       socket.emit('error', { message: 'You already have an active challenge.' });
       if (ack) ack(false);
@@ -128,7 +130,7 @@ io.on('connection', (socket) => {
     }
 
     const challenge = {
-      id: "challenge-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      id: `challenge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       amount,
       createdBy: socket.id,
       uid,
@@ -146,26 +148,26 @@ io.on('connection', (socket) => {
     const challenge = challenges.find(c => c.id === data.challengeId);
     if (!challenge) {
       socket.emit('error', { message: 'Challenge not found.' });
-      if (ack) ack(false);
-      return;
+      if (ack) ack(false); return;
     }
     if (challenge.createdBy === socket.id) {
       socket.emit('error', { message: 'Cannot accept your own challenge.' });
-      if (ack) ack(false);
-      return;
+      if (ack) ack(false); return;
+    }
+    if (!data.uid) {
+        socket.emit('error', { message: 'You must be logged in to accept a challenge.' });
+        if (ack) ack(false); return;
     }
 
-    const fundsDeducted = await deductFunds(challenge.uid, data.uid, challenge.amount);
-    if (!fundsDeducted) {
-        socket.emit('error', { message: 'Failed to process transaction. Please check balances.' });
-        if (ack) ack(false);
-        return;
+    const deductionResult = await deductFunds(challenge.uid, data.uid, challenge.amount);
+    if (!deductionResult.success) {
+        socket.emit('error', { message: `Transaction Failed: ${deductionResult.message}` });
+        if (ack) ack(false); return;
     }
 
     challenges = challenges.filter(c => c.id !== data.challengeId);
 
-    const matchId = "match-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-
+    const matchId = `match-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const match = {
       id: matchId,
       playerA: { id: challenge.createdBy, name: challenge.name, uid: challenge.uid },
@@ -186,21 +188,17 @@ io.on('connection', (socket) => {
 
     io.to(challenge.createdBy).emit('matchConfirmed', { roomId: match.id });
     io.to(socket.id).emit('matchConfirmed', { roomId: match.id });
-    console.log(`[Server] Emitted matchConfirmed for room ${match.id}`);
     if (ack) ack(true);
   });
 
   socket.on('joinRoom', async ({ roomId, userName }) => {
     const match = matches.find(m => m.id === roomId);
     if (!match) {
-      console.log(`[❌ Server] Room NOT FOUND for ID: ${roomId}`);
       socket.emit('roomNotFound', { message: 'Room not found.' });
       return;
     }
 
-    console.log(`[Server] ${userName} (socket: ${socket.id}) joined room: ${roomId}`);
     socket.join(roomId);
-
     const roomData = {
       players: [match.playerA, match.playerB].filter(p => p && p.id),
       amount: match.amount,
@@ -209,27 +207,18 @@ io.on('connection', (socket) => {
     };
 
     io.to(roomId).emit('roomStateUpdate', roomData);
-    if (match.generatedRoomCode) {
-      socket.emit('userProvidedRoomCode', match.generatedRoomCode);
-      console.log(`[Server] Sent existing room code ${match.generatedRoomCode} to ${userName} in room ${roomId}`);
-    }
   });
 
   socket.on('userProvidedRoomCode', async ({ roomId, code }) => {
     const match = matches.find(m => m.id === roomId);
-    if (!match) {
-      socket.emit('error', { message: 'Room not found.' });
-      return;
-    }
+    if (!match) return socket.emit('error', { message: 'Room not found.' });
 
     if (!/^\d{8}$/.test(code)) {
-      socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
-      return;
+      return socket.emit('error', { message: 'Invalid room code. Must be an 8-digit number.' });
     }
 
     if (match.generatedRoomCode && match.roomCodeProvider !== socket.id) {
-      socket.emit('error', { message: 'Room code already provided by another player.' });
-      return;
+      return socket.emit('error', { message: 'Room code already provided by another player.' });
     }
 
     match.generatedRoomCode = code;
@@ -238,21 +227,12 @@ io.on('connection', (socket) => {
     await saveMatchesToFile();
 
     io.to(roomId).emit('userProvidedRoomCode', code);
-    io.to(roomId).emit('roomStateUpdate', {
-      players: [match.playerA, match.playerB].filter(p => p && p.id),
-      amount: match.amount,
-      generatedRoomCode: code,
-      roomCodeProvider: socket.id,
-    });
-    console.log(`[Server] Room code ${code} provided by socket ${socket.id} for room ${roomId}`);
+    io.to(roomId).emit('roomStateUpdate', { ...match });
   });
 
   socket.on('submitGameResult', async ({ roomId, result, proofUrl }) => {
     const match = matches.find(m => m.id === roomId);
-    if (!match) {
-      socket.emit('error', { message: 'Room not found.' });
-      return;
-    }
+    if (!match) return socket.emit('error', { message: 'Room not found.' });
 
     const player = match.playerA.id === socket.id ? match.playerA : match.playerB;
     if (player && player.uid) {
@@ -262,14 +242,13 @@ io.on('connection', (socket) => {
                 lastGameProofUrl: proofUrl,
                 lastGameResult: result,
                 lastMatchId: roomId,
-                lastMatchAmount: match.amount,
                 winStatus: 'Pending',
             });
+            match.status = 'pending'; // Update match status
             console.log(`[Server] Updated game result proof for user ${player.uid}`);
         } catch (error) {
             console.error(`[Server] Error updating user doc with game proof:`, error);
-            socket.emit('error', { message: 'Error submitting result. Please try again.' });
-            return;
+            return socket.emit('error', { message: 'Error submitting result. Please try again.' });
         }
     }
 
@@ -277,29 +256,15 @@ io.on('connection', (socket) => {
     await saveMatchToFirestore(match);
     await saveMatchesToFile();
     io.to(roomId).emit('gameResultUpdate', match.playerResults);
-    console.log(`[Server] Game result submitted by ${socket.id} for room ${roomId}: ${result}`);
   });
 
   socket.on('disconnect', async () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
-
-    challenges = challenges.filter(c => c.createdBy !== socket.id);
-
-    const leftMatches = matches.filter(m => m.playerA.id === socket.id || m.playerB.id === socket.id);
-    if (leftMatches.length) {
-      leftMatches.forEach(m => {
-        const opponentId = m.playerA.id === socket.id ? m.playerB.id : m.playerA.id;
-        io.to(opponentId).emit('gameEnd', { message: 'Opponent left the match.' });
-        io.to(opponentId).emit('playerLeft', {
-          socketId: socket.id,
-          name: m.playerA.id === socket.id ? m.playerA.name : m.playerB.name,
-        });
-      });
+    const wasInChallenge = challenges.some(c => c.createdBy === socket.id);
+    if (wasInChallenge) {
+        challenges = challenges.filter(c => c.createdBy !== socket.id);
+        updateAllQueues();
     }
-
-    matches = matches.filter(m => m.playerA.id !== socket.id && m.playerB.id !== socket.id);
-    await saveMatchesToFile();
-    updateAllQueues();
   });
 
   function updateAllQueues() {
@@ -308,23 +273,15 @@ io.on('connection', (socket) => {
   }
 
   function getClientChallenges(requestorId = null) {
-    return challenges.map(ch => ({
-      ...ch,
-      own: requestorId ? ch.createdBy === requestorId : undefined,
-    }));
+    return challenges.map(ch => ({ ...ch, own: requestorId ? ch.createdBy === requestorId : undefined }));
   }
 
   function getClientMatches() {
-    return matches.map(m => ({
-      id: m.id,
-      playerA: m.playerA,
-      playerB: m.playerB,
-      amount: m.amount,
-    }));
+    return matches.map(m => ({ id: m.id, playerA: m.playerA, playerB: m.playerB, amount: m.amount }));
   }
 });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

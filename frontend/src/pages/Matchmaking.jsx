@@ -7,7 +7,6 @@ import { getAuth } from 'firebase/auth';
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
   const [challenges, setChallenges] = useState([]);
@@ -15,14 +14,14 @@ export function Matchmaking() {
   const [myChallengeId, setMyChallengeId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(0);
-  const [userName, setUserName] = useState("Anonymous"); // Store user name
+  const [userName, setUserName] = useState("Anonymous");
+  const [error, setError] = useState("");
   const socketRef = useRef(null);
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
 
   useEffect(() => {
-    // Fetch user balance and name
     const fetchUserData = async () => {
       if (user) {
         try {
@@ -46,7 +45,6 @@ export function Matchmaking() {
 
     fetchUserData();
 
-    // Socket.IO setup
     const socket = io("https://ludo-p65v.onrender.com/", {
       transports: ["websocket"],
       reconnection: true,
@@ -58,95 +56,89 @@ export function Matchmaking() {
 
     socket.on("connect", () => {
       console.log(`[Client] Matchmaking connected as ${socket.id}`);
+      setError("");
     });
 
     socket.on("updateChallenges", (list) => {
-      console.log(`[Client] Received challenges:`, list);
       setChallenges(list);
     });
 
     socket.on("updateMatches", (list) => {
-      console.log(`[Client] Received matches:`, list);
       setMatches(list);
     });
 
     socket.on("yourChallengeId", (id) => {
-      console.log(`[Client] My challenge ID: ${id}`);
       setMyChallengeId(id);
     });
 
     socket.on("matchConfirmed", ({ roomId }) => {
-      console.log(`[Client] Match confirmed, navigating to room ${roomId}`);
       navigate(`/room/${roomId}`);
     });
 
     socket.on("error", ({ message }) => {
-      console.log(`[Client] Error: ${message}`);
+      console.error(`[Client] Error: ${message}`);
+      setError(message);
       setLoading(false);
-      alert(message);
     });
 
     socket.on("disconnect", () => {
-      console.log("[Client] Disconnected from server");
-    });
-
-    socket.on("reconnect", () => {
-      console.log("[Client] Reconnected to server");
+      setError("You are disconnected. Please check your internet connection. Ad-blockers can sometimes interfere with the connection.");
     });
 
     return () => {
-      socket.off("connect");
-      socket.off("updateChallenges");
-      socket.off("updateMatches");
-      socket.off("yourChallengeId");
-      socket.off("matchConfirmed");
-      socket.off("error");
-      socket.off("disconnect");
-      socket.off("reconnect");
+      socket.disconnect();
     };
   }, [navigate, user]);
 
   const handleSet = () => {
+    if (!user) {
+        setError("You must be logged in to create a challenge.");
+        return;
+    }
     const challengeAmount = parseInt(amount);
     if (challengeAmount > 0) {
       if (balance >= challengeAmount) {
         setLoading(true);
-        console.log(`[Client] Creating challenge for ₹${amount} by ${userName}`);
+        setError("");
         socketRef.current.emit("challenge:create", { 
           amount, 
-          uid: user?.uid || '' ,
+          uid: user.uid,
           name: userName
         }, (success) => {
           setLoading(false);
           if (!success) {
-            alert("Failed to create challenge.");
+            setError("Failed to create challenge. The server might be busy or an error occurred.");
           }
         });
       } else {
-        alert("Insufficient balance to create this challenge.");
+        setError("Insufficient balance to create this challenge.");
       }
     } else {
-      alert("Please enter a valid amount.");
+      setError("Please enter a valid amount.");
     }
   };
 
   const handlePlay = (challengeId) => {
+    if (!user) {
+        setError("You must be logged in to accept a challenge.");
+        return;
+    }
     const challenge = challenges.find((ch) => ch.id === challengeId);
     if (challenge && balance >= challenge.amount) {
       setLoading(true);
-      console.log(`[Client] Accepting challenge ${challengeId}`);
+      setError("");
       socketRef.current.emit("challenge:accept", { 
         challengeId, 
-        uid: user?.uid || '' ,
+        uid: user.uid,
         name: userName
       }, (success) => {
         setLoading(false);
         if (!success) {
-          alert("Failed to accept challenge.");
+          setError("Failed to accept challenge. The server might be busy or an error occurred.");
         }
       });
     } else {
-      alert("Insufficient balance to accept this challenge.");
+      setError("Insufficient balance to accept this challenge.");
     }
   };
 
@@ -166,6 +158,7 @@ export function Matchmaking() {
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
           <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
           <div className="text-gray-700 mb-3">Your Balance: ₹{balance.toFixed(2)}</div>
+          {error && <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>}
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
