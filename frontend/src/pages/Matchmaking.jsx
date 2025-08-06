@@ -51,10 +51,6 @@ export function Matchmaking() {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      auth: async (cb) => {
-        const token = await user.getIdToken();
-        cb({ token });
-      },
     });
     socketRef.current = socket;
 
@@ -122,39 +118,25 @@ export function Matchmaking() {
     }
   };
 
-  const handlePlay = async (challengeId) => {
+  const handlePlay = (challengeId) => {
     if (!user) {
-      setError("You must be logged in to accept a challenge.");
-      return;
+        setError("You must be logged in to accept a challenge.");
+        return;
     }
-  
     const challenge = challenges.find((ch) => ch.id === challengeId);
     if (challenge && balance >= challenge.amount) {
       setLoading(true);
       setError("");
-      try {
-        const token = await user.getIdToken();
-        socketRef.current.emit(
-          "challenge:accept",
-          {
-            challengeId,
-            uid: user.uid,
-            name: userName,
-            token,
-          },
-          (success) => {
-            setLoading(false);
-            if (!success) {
-              setError(
-                "Failed to accept challenge. The server might be busy or an error occurred."
-              );
-            }
-          }
-        );
-      } catch (error) {
-        setError("Failed to authenticate. Please try again.");
+      socketRef.current.emit("challenge:accept", { 
+        challengeId, 
+        uid: user.uid,
+        name: userName
+      }, (success) => {
         setLoading(false);
-      }
+        if (!success) {
+          setError("Failed to accept challenge. The server might be busy or an error occurred.");
+        }
+      });
     } else {
       setError("Insufficient balance to accept this challenge.");
     }
