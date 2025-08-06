@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import walletLogo from "../assets/wallet.png";
 import supportLogo from "../assets/support.png";
 import accountLogo from "../assets/account.png";
@@ -24,6 +24,29 @@ export function Menu() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -75,6 +98,7 @@ const handleLogout = async () => {
           style={{ marginTop: "10px" }}
         >
           <button
+            ref={buttonRef}
             onClick={() => {
               setIsOpen(!isOpen);
             }}
@@ -83,6 +107,7 @@ const handleLogout = async () => {
           </button>
         </span>
         <div
+          ref={menuRef}
           className={`fixed top-0 -right-3 w-64 h-full bg-menu-base shadow-lg transform transition-transform duration-300 z-40 ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
