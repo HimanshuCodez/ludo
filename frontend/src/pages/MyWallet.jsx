@@ -1,13 +1,13 @@
-import rupeeLogo from '../assets/rupee.png';
-import rupee2Logo from '../assets/rupee2.png';
-import arrowL from '../assets/arrowL.png';
-import { useNavigate } from 'react-router-dom';
-import { Header } from '../Components/Header';
-import { Footer } from '../Components/Footer';
-import { useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import rupeeLogo from "../assets/rupee.png";
+import rupee2Logo from "../assets/rupee2.png";
+import arrowL from "../assets/arrowL.png";
+import { useNavigate } from "react-router-dom";
+import { Header } from "../Components/Header";
+import { Footer } from "../Components/Footer";
+import { useEffect, useState } from "react";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export function MyWallet() {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export function MyWallet() {
   useEffect(() => {
     const fetchWallet = async () => {
       if (user) {
-        const userRef = doc(db, 'users', user.uid);
+        const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           setDepositChips(parseFloat(userSnap.data().depositChips) || 0);
@@ -34,7 +34,10 @@ export function MyWallet() {
 
       {/* Back & Wallet History */}
       <div className="px-4 pt-2 pb-1 flex items-center justify-between">
-        <button onClick={() => navigate('/')} className="rounded-full bg-primary p-1">
+        <button
+          onClick={() => navigate("/")}
+          className="rounded-full bg-primary p-1"
+        >
           <img src={arrowL} alt="Back" className="w-8 h-8" />
         </button>
         <button className="bg-gradient-to-r from-yellow-400 to-red-400 text-white font-semibold px-4 py-1 rounded-lg shadow">
@@ -45,7 +48,9 @@ export function MyWallet() {
       {/* Verified Status */}
       <div className="mx-4 bg-gradient-to-r from-green-200 to-green-400 rounded-md px-4 py-2 flex justify-between items-center text-sm font-medium text-green-900 shadow-sm">
         <span>✔ Verified</span>
-        <span className="bg-green-700 text-white text-xs px-2 py-1 rounded">Verification Completed</span>
+        <span className="bg-green-700 text-white text-xs px-2 py-1 rounded">
+          Verification Completed
+        </span>
       </div>
 
       {/* Wallet Sections */}
@@ -56,7 +61,8 @@ export function MyWallet() {
             Deposit Chips
           </div>
           <div className="bg-blue-50 text-[11px] text-center text-blue-600 px-2 py-1">
-            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते हैं, बैंक या UPI से निकाला नहीं जा सकता है।
+            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते
+            हैं, बैंक या UPI से निकाला नहीं जा सकता है।
           </div>
           <div className="flex justify-center py-4 bg-gradient-to-br from-yellow-200 to-red-200">
             <div className="bg-white rounded-lg px-6 py-3 shadow text-center space-y-1">
@@ -69,7 +75,7 @@ export function MyWallet() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/AddCash')}
+            onClick={() => navigate("/AddCash")}
             className="w-full bg-green-600 text-white py-2 font-semibold rounded-b-lg hover:bg-green-700 transition"
           >
             Add
@@ -82,7 +88,8 @@ export function MyWallet() {
             Winning Money
           </div>
           <div className="bg-red-50 text-[11px] text-center text-red-600 px-2 py-1">
-            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते हैं, बैंक या UPI से निकाला नहीं जा सकता है।
+            यह चिप्स Win अवं Buy की गई चिप्स है। इनसे सिर्फ गेम खेले जा सकते
+            हैं, बैंक या UPI से निकाला नहीं जा सकता है।
           </div>
           <div className="flex justify-center py-4 bg-gradient-to-br from-orange-100 to-yellow-200">
             <div className="bg-white rounded-lg px-6 py-3 shadow text-center space-y-1">
@@ -94,12 +101,16 @@ export function MyWallet() {
               <div className="text-gray-600 text-sm">Money</div>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/AddCash')}
-            className="w-full bg-red-600 text-white py-2 font-semibold rounded-b-lg hover:bg-red-700 transition"
-          >
-            Withdraw
-          </button>
+          <li className="p-[4px] bg-primary">
+            <button
+              onClick={() => navigate("/Withdraw")}
+              className="text-black font-roboto text-[17px] w-full"
+            >
+              <div className="flex   items-center gap-2 pl-16">
+                <span className="pl-20">Withdraw</span>
+              </div>
+            </button>
+          </li>
         </div>
       </div>
 

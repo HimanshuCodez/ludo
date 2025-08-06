@@ -33,21 +33,24 @@ const WithdrawAdmin = () => {
     const request = requests.find(r => r.id === id);
     if (!request) return;
 
+    const updateData = {
+        withdrawalStatus: action === 'approve' ? 'Approved' : 'Rejected',
+        withdrawalAmount: 0,
+        withdrawalMethod: '',
+        upiId: '',
+        accountNumber: '',
+        ifscCode: '',
+        bankName: '',
+    };
+
     if (action === 'approve') {
       // On approval, deduct the full requested amount from the user's balance.
-      // The 5% commission is handled externally.
-      await updateDoc(userRef, {
-        withdrawalStatus: 'Approved',
-        depositChips: increment(-request.withdrawalAmount),
-        withdrawalAmount: 0,
-      });
-    } else { // 'reject'
-      // On rejection, simply reset the status and amount. The balance is not touched.
-      await updateDoc(userRef, {
-        withdrawalStatus: 'Rejected',
-        withdrawalAmount: 0,
-      });
-    }
+      updateData.depositChips = increment(-request.withdrawalAmount);
+    } 
+    // For rejection, we don't touch the balance, just reset the withdrawal fields.
+
+    await updateDoc(userRef, updateData);
+
 
     setRequests(prev => prev.filter(user => user.id !== id));
   };
@@ -73,8 +76,19 @@ const WithdrawAdmin = () => {
             >
               <div className="mb-2">
                 <h2 className="text-xl font-semibold text-gray-800"> Name : {user.name}</h2>
-                <p className="text-sm text-gray-500">UPI ID: <span className="text-black font-medium">{user.upiId}</span></p>
+                {user.withdrawalMethod === 'upi' && (
+                    <p className="text-sm text-gray-500">UPI ID: <span className="text-black font-medium">{user.upiId}</span></p>
+                )}
               </div>
+
+              {user.withdrawalMethod === 'bank' && (
+                <div className="mb-2">
+                    <h3 className="text-lg font-semibold text-gray-700">Bank Details</h3>
+                    <p className="text-sm text-gray-500">Account Number: <span className="text-black font-medium">{user.accountNumber}</span></p>
+                    <p className="text-sm text-gray-500">IFSC Code: <span className="text-black font-medium">{user.ifscCode}</span></p>
+                    <p className="text-sm text-gray-500">Bank Name: <span className="text-black font-medium">{user.bankName}</span></p>
+                </div>
+              )}
 
               <div className="mt-4 bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-2">Withdrawal Details</h3>

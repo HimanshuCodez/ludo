@@ -183,17 +183,7 @@ const handleLogout = async () => {
                   </div>
                 </button>
               </li>
-              <li className="p-[4px] bg-primary">
-                <button
-                  onClick={() => navigate("/Withdraw")}
-                  className="text-black font-roboto text-[17px] w-full"
-                >
-                  <div className="flex items-center gap-2 pl-16">
-                    <CheckIcon />
-                    <span>Withdraw</span>
-                  </div>
-                </button>
-              </li>
+              
               <li className="p-[4px] bg:gray-200">
                 <button
                   onClick={handleLogout}

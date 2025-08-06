@@ -9,12 +9,14 @@ import moneyLogo from '../assets/money.png';
 import battleLogo from '../assets/battle.png';
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export function Profile() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -25,12 +27,31 @@ export function Profile() {
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
       if (snap.exists()) {
-        setUserData(snap.data());
+        const data = snap.data();
+        setUserData(data);
+        setName(data.name || 'Player');
       }
     };
 
     fetchUser();
   }, []);
+
+  const handleSave = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user || !name.trim()) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      await updateDoc(userRef, {
+        name: name,
+      });
+      setUserData((prevData) => ({ ...prevData, name: name }));
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating name: ', error);
+    }
+  };
 
   return (
     <div className='min-h-screen bg-gray-100 font-roboto'>
@@ -40,11 +61,37 @@ export function Profile() {
         {/* User Info */}
         <div className='bg-white shadow rounded-lg p-4 flex items-center space-x-4'>
           <img src={display} alt='profile' className='w-16 h-16 rounded-full object-cover border' />
-          <div>
-            <h2 className='text-lg font-semibold text-gray-800'>
-              {userData?.name || 'Player'}
-            </h2>
-            <p className='text-sm text-gray-500'>
+          <div className='flex-grow'>
+            <div className='flex items-center space-x-3'>
+              {isEditing ? (
+                <input
+                  type='text'
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className='text-lg font-semibold text-gray-800 border-b-2 focus:outline-none focus:border-blue-500'
+                />
+              ) : (
+                <h2 className='text-lg font-semibold text-gray-800'>
+                  {userData?.name || 'Player'}
+                </h2>
+              )}
+              {isEditing ? (
+                <button
+                  onClick={handleSave}
+                  className='bg-green-500 text-white px-4 py-1 rounded text-sm hover:bg-green-600 transition'
+                >
+                  Save
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className='bg-blue-500 text-white px-4 py-1 rounded text-sm hover:bg-blue-600 transition'
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            <p className='text-sm text-gray-500 mt-1'>
               Referral Code: <span className='font-medium'>{userData?.referralCode || 'N/A'}</span>
               {userData?.referralCode && (
                 <button
