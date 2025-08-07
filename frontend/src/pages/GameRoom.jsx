@@ -3,10 +3,10 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
-import GameResultBox from "../Components/GameResultBox";
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, storage } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export function GameRoom() {
   const { roomId } = useParams();
@@ -24,6 +24,16 @@ export function GameRoom() {
   const retryCount = useRef(0);
   const auth = getAuth();
   const user = auth.currentUser;
+
+  // --- GameResultBox state ---
+  const [gameResult, setGameResult] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [showCancelOptions, setShowCancelOptions] = useState(false);
+  const [showResultBox, setShowResultBox] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(20 * 60);
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -213,15 +223,168 @@ export function GameRoom() {
     }
   };
 
-  const handleGameResult = (result, proofUrl) => {
-    console.log(`[Client] Submitting game result ${result} for room ${roomId}`);
-    socketRef.current.emit("submitGameResult", { roomId, result, proofUrl });
-    setGameLog((prev) => [...prev, `Game Result Submitted: ${result}`]);
-    alert(`You submitted: ${result}. Your proof has been uploaded and is pending review.`);
+  // --- GameResultBox functions ---
+  const handleFileUpload = async (file) => {
+    if (!file || !user) return;
+    const fileRef = ref(storage, `gameProofs/${user.uid}/${Date.now()}.jpg`);
+    setUploading(true);
+    setUploadError('');
+    try {
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+    
+      await updateDoc(doc(db, 'users', user.uid), {
+        lastGameProofUrl: downloadURL,
+        lastGameResult: 'I WON',
+        lastGameAt: new Date().toISOString(),
+      });
+      setUploading(false);
+      setShowSuccess(true);
+    } catch (err) { 
+      console.error(err);
+      setUploadError('Upload failed. Please try again.');
+      setUploading(false);
+    }
   };
+
+  const handleGameResult = (result) => {
+    setGameResult(result);
+    if (result === 'I WON') {
+      // Show upload prompt
+    } else if (result === 'I LOST') {
+      setTimeout(() => setShowSuccess(true), 500);
+    } else if (result === 'CANCEL') {
+      setShowCancelOptions(true);
+    }
+  };
+
+  const handleCancelReasonSubmit = async (reason) => {
+    if (!user) return;
+    setUploading(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        lastGameResult: 'Canceled',
+        lastGameCancelReason: reason,
+        lastGameAt: new Date().toISOString(),
+      });
+      setGameResult('CANCEL');
+      setShowSuccess(true);
+      setShowCancelOptions(false);
+    } catch (error) {
+      console.error("Error submitting cancellation reason: ", error);
+      setUploadError('Failed to submit reason. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetAll = () => {
+    setShowSuccess(false);
+    setShowResultBox(false);
+    setGameResult(null);
+    setTimeLeft(20 * 60);
+    setUploadError('');
+    setShowCancelOptions(false);
+  };
+
 
   const myPlayer = players.find((p) => p.id === myPlayerId);
   const opponentPlayer = players.find((p) => p.id !== myPlayerId);
+
+  const renderGameResultBox = () => {
+    if (gameResult === 'I WON' && !showSuccess) {
+      return (
+        <div className="order-2">
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Upload Screenshot</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Please upload a screenshot of your winning screen in Ludo King.
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleFileUpload(e.target.files[0])}
+              className="mb-4"
+              disabled={uploading}
+            />
+            {uploadError && <div className="text-red-600 text-sm mb-2">{uploadError}</div>}
+            {uploading ? (
+              <p className="text-blue-600 text-sm">Uploading...</p>
+            ) : (
+              <p className="text-sm text-gray-500">Only image files allowed</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+  
+    if (showSuccess) {
+      return (
+        <div className="order-2">
+          <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
+            <div className="mb-6 text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full mx-auto flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {gameResult === 'I WON' ? 'Congratulations! 🎉' : gameResult === 'I LOST' ? 'Better Luck Next Time! 💪' : 'Result Submitted'}
+              </h2>
+              <p className="text-gray-600 mb-4">
+                {gameResult === 'I WON'
+                  ? 'Your winning screenshot has been recorded!'
+                  : gameResult === 'I LOST'
+                  ? 'Your result has been recorded. Keep practicing!'
+                  : 'Your cancellation has been recorded.'}
+              </p>
+            </div>
+            <button
+              onClick={resetAll}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Play Another Game
+            </button>
+          </div>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="order-2">
+        <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
+          {showResultBox && !showSuccess && !showCancelOptions && (
+            <>
+              <div className="mb-2 font-bold text-lg text-center">🎯 Game Result</div>
+              <p className="text-gray-700 text-xs sm:text-sm text-center mb-4">
+                After playing in Ludo King, return here and submit your result.
+              </p>
+              <div className="flex w-full gap-2">
+                <button onClick={() => handleGameResult('I WON')} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700">I WON</button>
+                <button onClick={() => handleGameResult('I LOST')} className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700">I LOST</button>
+                <button onClick={() => handleGameResult('CANCEL')} className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500">CANCEL</button>
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                ⏰ Please submit your result within 5 minutes of game completion
+              </p>
+            </>
+          )}
+  
+          {showCancelOptions && (
+            <div className="w-full">
+              <h3 className="font-bold text-lg text-center mb-3">Reason for Cancellation</h3>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => handleCancelReasonSubmit('Abusing')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Abusing</button>
+                <button onClick={() => handleCancelReasonSubmit('Opponent quit')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Opponent quit</button>
+                <button onClick={() => handleCancelReasonSubmit('Network issue')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Network issue</button>
+                <button onClick={() => handleCancelReasonSubmit("I don't want to play")} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">I don't want to play</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
@@ -244,6 +407,7 @@ export function GameRoom() {
             </div>
             <div className="flex flex-col items-center w-1/3">
               <div className="w-10 h-10 sm:w-14 sm:h-14 bg-orange-400 rounded-full flex items-center justify-center text-white text-base sm:text-xl font-bold mb-1">
+              {/* problem in opponent name that should be checked*/}
                 {opponentPlayer?.name?.charAt(0) || "O"}
               </div>
               <div className="font-semibold text-gray-800 text-sm sm:text-base">{opponentPlayer?.name || "Opponent"}</div>
@@ -316,7 +480,7 @@ export function GameRoom() {
               </div>
             </div>
 
-            <GameResultBox gameStarted={true} onResultSubmit={handleGameResult} />
+            {renderGameResultBox()}
           </div>
 
           <div className="mt-6">

@@ -33,7 +33,14 @@ const Dashboard = () => {
           <Link to={"/Kyc-Admin"}>
             {" "}
             <button className="w-full text-left text-gray-700">
-              📄 KYC Approve
+              📄  KYC Approve
+            </button>
+          </Link>
+          <Link to={"/notice-change"}>
+            {" "}
+            <button className="w-full text-left text-gray-700">
+              📄 Notice Change
+              
             </button>
           </Link>
         </nav>

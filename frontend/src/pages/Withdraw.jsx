@@ -52,6 +52,10 @@ const Withdraw = () => {
         setError('Insufficient balance.');
         return;
     }
+    if (withdrawalAmount < 200) {
+        setError('Balance must be above 200rs.');
+        return;
+    }
 
     if (method === 'upi' && !validateUPI(upiId)) {
       setError('Please enter a valid UPI ID (e.g., user@bank).');

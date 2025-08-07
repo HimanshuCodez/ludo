@@ -24,6 +24,7 @@ import Withdraw from "./pages/Withdraw";
 import WinApprove from "./Admin/WinApprove";
 import WithdrawAdmin from "./Admin/AdminWithdraw";
 import AdminKycApprove from "./Admin/AdminKycApprove";
+import NoticeChange from "./Admin/NoticeChange";
 
 
 
@@ -51,6 +52,7 @@ function App() {
           <Route path='/Withdraw' element={<Withdraw />} />
           <Route path='/Withdraw-admin' element={<WithdrawAdmin />} />
           <Route path='/Win-Approve' element={<WinApprove />} />
+          <Route path='/notice-change' element={<NoticeChange />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
        
         

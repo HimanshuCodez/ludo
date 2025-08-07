@@ -32,8 +32,8 @@ const WinApprove = () => {
       setStatusMessage('');
       try {
         const q = query(
-          collection(db, 'matches'),
-          where('status', '==', 'pending')
+          collection(db, 'users'),
+          where('lastgameURl', '==', 'pending')
         );
         const querySnapshot = await getDocs(q);
         const matchesWithUserData = await Promise.all(
@@ -120,32 +120,37 @@ const WinApprove = () => {
               <p><strong>Amount:</strong> ₹{match.amount}</p>
               <p><strong>Players:</strong> {match.playerA.name} vs {match.playerB.name}</p>
 
-              {Object.entries(match.playerResults).map(([uid, result]) => (
-                <div key={uid} className="mt-2 border-t pt-2">
-                  <p><strong>Winner Claim:</strong> {result.result}</p>
-                  {match.playersData && match.playersData[uid] && match.playersData[uid].lastGameProofUrl ? (
-                    <p>
-                      <strong>Proof:</strong> <a href={match.playersData[uid].lastGameProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a>
-                    </p>
-                  ) : (
-                    <p><strong>Proof:</strong> No proof uploaded.</p>
-                  )}
-                  <div className="flex space-x-4 mt-2">
-                    <button
-                      onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Approved')}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Rejected')}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                    >
-                      Reject
-                    </button>
+              {Object.entries(match.playerResults).map(([uid, result]) => {
+                const playerData = match.playersData?.[uid];
+                if (!playerData) return null; // Don't render if player data hasn't loaded
+
+                return (
+                  <div key={uid} className="mt-2 border-t pt-2">
+                    <p><strong>Winner Claim:</strong> {playerData.name} ({result.result})</p>
+                    {playerData.lastGameProofUrl ? (
+                      <p>
+                        <strong>Proof:</strong> <a href={playerData.lastGameProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a>
+                      </p>
+                    ) : (
+                      <p><strong>Proof:</strong> No proof uploaded.</p>
+                    )}
+                    <div className="flex space-x-4 mt-2">
+                      <button
+                        onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Approved')}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Rejected')}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>

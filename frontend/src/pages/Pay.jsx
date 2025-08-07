@@ -46,8 +46,8 @@ export function Pay() {
       return;
     }
 
-    if (!amount || isNaN(amount) || amount < 10 || amount > 100000) {
-      setError('Invalid amount. Please select an amount between ₹10 and ₹100000.');
+    if (!amount || isNaN(amount) || amount < 10 || amount > 20000) {
+      setError('Invalid amount. Please select an amount between ₹10 and ₹20000.');
       setLoading(false);
       navigate('/AddCash');
       return;
