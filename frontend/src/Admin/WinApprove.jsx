@@ -7,6 +7,7 @@ import {
   query,
   where,
   runTransaction,
+  getDoc,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -35,9 +36,23 @@ const WinApprove = () => {
           where('status', '==', 'pending')
         );
         const querySnapshot = await getDocs(q);
-        const matches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setPendingMatches(matches);
-        if (matches.length === 0) {
+        const matchesWithUserData = await Promise.all(
+          querySnapshot.docs.map(async (d) => {
+            const match = { id: d.id, ...d.data() };
+            const playerUids = Object.keys(match.playerResults);
+            const playersData = {};
+            for (const uid of playerUids) {
+              const userDoc = await getDoc(doc(db, 'users', uid));
+              if (userDoc.exists()) {
+                playersData[uid] = userDoc.data();
+              }
+            }
+            return { ...match, playersData };
+          })
+        );
+
+        setPendingMatches(matchesWithUserData);
+        if (matchesWithUserData.length === 0) {
           setError('No matches are currently pending approval.');
         }
       } catch (err) {
@@ -79,7 +94,7 @@ const WinApprove = () => {
       });
 
       setStatusMessage(`Match ${match.id} has been ${status}.`);
-      setPendingMatches(pendingMatches.filter(m => m.id !== match.id));
+      setPendingMatches(pendingMatches.filter((m) => m.id !== match.id));
     } catch (err) {
       console.error(err);
       setError(`Failed to update match status: ${err.message}`);
@@ -99,25 +114,31 @@ const WinApprove = () => {
         )}
 
         <div className="space-y-4">
-          {pendingMatches.map(match => (
+          {pendingMatches.map((match) => (
             <div key={match.id} className="bg-gray-100 p-4 rounded-lg shadow">
               <p><strong>Match ID:</strong> {match.id}</p>
               <p><strong>Amount:</strong> ₹{match.amount}</p>
               <p><strong>Players:</strong> {match.playerA.name} vs {match.playerB.name}</p>
-              
-              {Object.values(match.playerResults).map((result, index) => (
-                <div key={index} className="mt-2 border-t pt-2">
+
+              {Object.entries(match.playerResults).map(([uid, result]) => (
+                <div key={uid} className="mt-2 border-t pt-2">
                   <p><strong>Winner Claim:</strong> {result.result}</p>
-                  <p><strong>Proof:</strong> <a href={result.proofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a></p>
+                  {match.playersData && match.playersData[uid] && match.playersData[uid].lastGameProofUrl ? (
+                    <p>
+                      <strong>Proof:</strong> <a href={match.playersData[uid].lastGameProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a>
+                    </p>
+                  ) : (
+                    <p><strong>Proof:</strong> No proof uploaded.</p>
+                  )}
                   <div className="flex space-x-4 mt-2">
                     <button
-                      onClick={() => handleApproval(match, match.playerA.id === Object.keys(match.playerResults)[index] ? match.playerA : match.playerB, 'Approved')}
+                      onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Approved')}
                       className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
                     >
                       Approve
                     </button>
                     <button
-                      onClick={() => handleApproval(match, match.playerA.id === Object.keys(match.playerResults)[index] ? match.playerA : match.playerB, 'Rejected')}
+                      onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Rejected')}
                       className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
                     >
                       Reject
@@ -134,3 +155,4 @@ const WinApprove = () => {
 };
 
 export default WinApprove;
+

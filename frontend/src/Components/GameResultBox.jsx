@@ -5,13 +5,14 @@ import { db, storage, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function GameResultComponent({ gameStarted }) {
-  const [timeLeft, setTimeLeft] = useState(1 * 60);
-  const [showResultBox, setShowResultBox] = useState(false);
   const [gameResult, setGameResult] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [userId, setUserId] = useState(null);
+  const [showCancelOptions, setShowCancelOptions] = useState(false);
+  const [showResultBox, setShowResultBox] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(20 * 60);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -22,7 +23,6 @@ export default function GameResultComponent({ gameStarted }) {
 
   useEffect(() => {
     let timer;
-
     if (gameStarted) {
       timer = setInterval(() => {
         setTimeLeft((prev) => {
@@ -35,56 +35,59 @@ export default function GameResultComponent({ gameStarted }) {
         });
       }, 1000);
     }
-
     return () => clearInterval(timer);
   }, [gameStarted]);
 
-  const formatTime = (seconds) => {
-    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${m}:${s}`;
+  const handleFileUpload = async (file) => {
+    if (!file || !userId) return;
+    const fileRef = ref(storage, `gameProofs/${userId}/${Date.now()}.jpg`);
+    setUploading(true);
+    setUploadError('');
+    try {
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+      await updateDoc(doc(db, 'users', userId), {
+        lastGameProofUrl: downloadURL,
+        lastGameResult: 'I WON',
+        lastGameAt: new Date().toISOString(),
+      });
+      setUploading(false);
+      setShowSuccess(true);
+    } catch (err) {
+      console.error(err);
+      setUploadError('Upload failed. Please try again.');
+      setUploading(false);
+    }
   };
-
- const handleFileUpload = async (file) => {
-  if (!file || !userId) return;
-
-  // ✅ Correct path that matches Firebase Storage rules
-  const fileRef = ref(storage, `gameProofs/${userId}/${Date.now()}.jpg`);
-
-  setUploading(true);
-  setUploadError('');
-
-  try {
-    await uploadBytes(fileRef, file);
-    const downloadURL = await getDownloadURL(fileRef);
-    await updateDoc(doc(db, 'users', userId), {
-      lastGameProofUrl: downloadURL,
-      lastGameResult: 'I WON',
-      lastGameAt: new Date().toISOString(),
-    });
-    setUploading(false);
-    setShowSuccess(true);
-  } catch (err) {
-    console.error(err);
-    setUploadError('Upload failed. Please try again.');
-    setUploading(false);
-  }
-};
-
 
   const handleGameResult = (result) => {
     setGameResult(result);
-
     if (result === 'I WON') {
       // Show upload prompt
     } else if (result === 'I LOST') {
-      setTimeout(() => {
-        setShowSuccess(true);
-      }, 500);
+      setTimeout(() => setShowSuccess(true), 500);
     } else if (result === 'CANCEL') {
-      setShowResultBox(false);
-      setGameResult(null);
-      setTimeLeft(20 * 60);
+      setShowCancelOptions(true);
+    }
+  };
+
+  const handleCancelReasonSubmit = async (reason) => {
+    if (!userId) return;
+    setUploading(true);
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        lastGameResult: 'Canceled',
+        lastGameCancelReason: reason,
+        lastGameAt: new Date().toISOString(),
+      });
+      setGameResult('CANCEL');
+      setShowSuccess(true);
+      setShowCancelOptions(false);
+    } catch (error) {
+      console.error("Error submitting cancellation reason: ", error);
+      setUploadError('Failed to submit reason. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -94,9 +97,9 @@ export default function GameResultComponent({ gameStarted }) {
     setGameResult(null);
     setTimeLeft(20 * 60);
     setUploadError('');
+    setShowCancelOptions(false);
   };
 
-  // === Upload Prompt ===
   if (gameResult === 'I WON' && !showSuccess) {
     return (
       <div className="order-2">
@@ -105,7 +108,6 @@ export default function GameResultComponent({ gameStarted }) {
           <p className="text-sm text-gray-600 mb-4">
             Please upload a screenshot of your winning screen in Ludo King.
           </p>
-
           <input
             type="file"
             accept="image/*"
@@ -113,11 +115,7 @@ export default function GameResultComponent({ gameStarted }) {
             className="mb-4"
             disabled={uploading}
           />
-
-          {uploadError && (
-            <div className="text-red-600 text-sm mb-2">{uploadError}</div>
-          )}
-
+          {uploadError && <div className="text-red-600 text-sm mb-2">{uploadError}</div>}
           {uploading ? (
             <p className="text-blue-600 text-sm">Uploading...</p>
           ) : (
@@ -128,7 +126,6 @@ export default function GameResultComponent({ gameStarted }) {
     );
   }
 
-  // === Success UI ===
   if (showSuccess) {
     return (
       <div className="order-2">
@@ -140,15 +137,16 @@ export default function GameResultComponent({ gameStarted }) {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {gameResult === 'I WON' ? 'Congratulations! 🎉' : 'Better Luck Next Time! 💪'}
+              {gameResult === 'I WON' ? 'Congratulations! 🎉' : gameResult === 'I LOST' ? 'Better Luck Next Time! 💪' : 'Result Submitted'}
             </h2>
             <p className="text-gray-600 mb-4">
               {gameResult === 'I WON'
                 ? 'Your winning screenshot has been recorded!'
-                : 'Your result has been recorded. Keep practicing!'}
+                : gameResult === 'I LOST'
+                ? 'Your result has been recorded. Keep practicing!'
+                : 'Your cancellation has been recorded.'}
             </p>
           </div>
-
           <button
             onClick={resetAll}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
@@ -160,56 +158,36 @@ export default function GameResultComponent({ gameStarted }) {
     );
   }
 
-  // === Default Timer & Result UI ===
   return (
     <div className="order-2">
       <div className="bg-white rounded-lg shadow p-5 flex flex-col items-center h-full">
-        {gameStarted && !showResultBox && (
-          <>
-            <div className="text-lg font-bold mb-2 text-center">🎮 Game in Progress...</div>
-            <p className="text-sm text-gray-700 text-center mb-1">
-              Please play your game. You can submit the result after:
-            </p>
-            <div className="text-3xl font-mono text-blue-600 mb-4">{formatTime(timeLeft)}</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${((20 * 60 - timeLeft) / (20 * 60)) * 100}%` }}
-              ></div>
-            </div>
-          </>
-        )}
-
-        {showResultBox && !showSuccess && (
+        {showResultBox && !showSuccess && !showCancelOptions && (
           <>
             <div className="mb-2 font-bold text-lg text-center">🎯 Game Result</div>
             <p className="text-gray-700 text-xs sm:text-sm text-center mb-4">
               After playing in Ludo King, return here and submit your result.
             </p>
             <div className="flex w-full gap-2">
-              <button
-                onClick={() => handleGameResult('I WON')}
-                className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition-colors"
-              >
-                I WON
-              </button>
-              <button
-                onClick={() => handleGameResult('I LOST')}
-                className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
-              >
-                I LOST
-              </button>
-              <button
-                onClick={() => handleGameResult('CANCEL')}
-                className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500 transition-colors"
-              >
-                CANCEL
-              </button>
+              <button onClick={() => handleGameResult('I WON')} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700">I WON</button>
+              <button onClick={() => handleGameResult('I LOST')} className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700">I LOST</button>
+              <button onClick={() => handleGameResult('CANCEL')} className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500">CANCEL</button>
             </div>
             <p className="text-xs text-gray-500 text-center mt-3">
               ⏰ Please submit your result within 5 minutes of game completion
             </p>
           </>
+        )}
+
+        {showCancelOptions && (
+          <div className="w-full">
+            <h3 className="font-bold text-lg text-center mb-3">Reason for Cancellation</h3>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => handleCancelReasonSubmit('Abusing')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Abusing</button>
+              <button onClick={() => handleCancelReasonSubmit('Opponent quit')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Opponent quit</button>
+              <button onClick={() => handleCancelReasonSubmit('Network issue')} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Network issue</button>
+              <button onClick={() => handleCancelReasonSubmit("I don't want to play")} className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">I don't want to play</button>
+            </div>
+          </div>
         )}
       </div>
     </div>
