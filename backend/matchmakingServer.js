@@ -129,6 +129,12 @@ io.on('connection', (socket) => {
       return;
     }
 
+    if (amount % 50 !== 0) {
+      socket.emit('error', { message: 'Bet amount must be in multiples of 50.' });
+      if (ack) ack(false);
+      return;
+    }
+
     const challenge = {
       id: `challenge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       amount,

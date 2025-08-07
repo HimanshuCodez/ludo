@@ -97,6 +97,10 @@ export function Matchmaking() {
     }
     const challengeAmount = parseInt(amount);
     if (challengeAmount > 0) {
+      if (challengeAmount % 50 !== 0) {
+        setError("Amount must be in multiples of 50.");
+        return;
+      }
       if (balance >= challengeAmount) {
         setLoading(true);
         setError("");
@@ -168,6 +172,7 @@ export function Matchmaking() {
           >
             <input
               type="number"
+              step="50"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter Amount"
