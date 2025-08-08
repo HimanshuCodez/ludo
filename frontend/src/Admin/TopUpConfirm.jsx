@@ -235,7 +235,7 @@ const TopUpConfirm = () => {
 
                 {/* Comment Section */}
                 <div className="p-6 border-b border-gray-100">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center"><MessageSquare className="w-4 h-4 mr-2" />Admin Comment (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2  items-center"><MessageSquare className="w-4 h-4 mr-2" />Admin Comment (Optional)</label>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}

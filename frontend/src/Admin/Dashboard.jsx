@@ -9,14 +9,13 @@ import {
   Settings,
   Home,
   BarChart3,
-  Users
+  Users,
+  DollarSign
 } from "lucide-react";
 import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
-
-// Mock components - replace with your actual components
-
+import TopUpConfirm from "./TopUpConfirm";
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -43,6 +42,13 @@ const Dashboard = () => {
       key: "kyc-admin",
       color: "text-blue-600",
       bgColor: "bg-blue-50 hover:bg-blue-100"
+    },
+    { 
+      icon: DollarSign, 
+      label: "Top Up Requests", 
+      key: "top-up-admin",
+      color: "text-pink-600",
+      bgColor: "bg-pink-50 hover:bg-pink-100"
     },
     { 
       icon: Bell, 
@@ -85,7 +91,7 @@ const Dashboard = () => {
             } border`}
           >
             <div className={`p-2 rounded-lg ${
-              activeSection === "Dashboard" ? "text-blue-600 bg-white" : "text-gray-600 bg-white"
+              activeSection === "dashboard" ? "text-blue-600 bg-white" : "text-gray-600 bg-white"
             } shadow-sm group-hover:shadow-md transition-shadow`}>
               <Home className="h-5 w-5" />
             </div>
@@ -171,57 +177,21 @@ const Dashboard = () => {
         <main className="flex-1 p-6 overflow-y-auto space-y-8">
           {activeSection === "dashboard" && (
             <>
-            
-              {/* Main Content Sections */}
               <div className="space-y-8">
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
+                  <div className="bg-gradient-to-r from-pink-50 to-pink-100 p-6 border-b border-pink-200">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-yellow-500 rounded-xl">
-                        <Trophy className="h-6 w-6 text-white" />
+                      <div className="p-2 bg-pink-500 rounded-xl">
+                        <DollarSign className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-gray-800">Win Approve</h2>
-                        <p className="text-gray-600">Manage game win approvals</p>
+                        <h2 className="text-xl font-bold text-gray-800">Top Up Requests</h2>
+                        <p className="text-gray-600">Process user top-up requests</p>
                       </div>
                     </div>
                   </div>
                   <div className="p-6">
-                    <WinApprove />
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 border-b border-green-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-green-500 rounded-xl">
-                        <CreditCard className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-800">Withdraw Requests</h2>
-                        <p className="text-gray-600">Process user withdrawal requests</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <WithdrawAdmin />
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 border-b border-blue-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-500 rounded-xl">
-                        <FileCheck className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-800">KYC Approve</h2>
-                        <p className="text-gray-600">Review and approve user verification</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <AdminKycApprove />
+                    <TopUpConfirm />
                   </div>
                 </div>
               </div>
@@ -230,17 +200,6 @@ const Dashboard = () => {
 
           {activeSection === "win-approve" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-yellow-500 rounded-xl">
-                    <Trophy className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Win Approve</h2>
-                    <p className="text-gray-600">Manage game win approvals</p>
-                  </div>
-                </div>
-              </div>
               <div className="p-6">
                 <WinApprove />
               </div>
@@ -249,17 +208,6 @@ const Dashboard = () => {
 
           {activeSection === "withdraw-admin" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 border-b border-green-200">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-500 rounded-xl">
-                    <CreditCard className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Withdraw Requests</h2>
-                    <p className="text-gray-600">Process user withdrawal requests</p>
-                  </div>
-                </div>
-              </div>
               <div className="p-6">
                 <WithdrawAdmin />
               </div>
@@ -268,36 +216,21 @@ const Dashboard = () => {
 
           {activeSection === "kyc-admin" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 border-b border-blue-200">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-500 rounded-xl">
-                    <FileCheck className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">KYC Approve</h2>
-                    <p className="text-gray-600">Review and approve user verification</p>
-                  </div>
-                </div>
-              </div>
               <div className="p-6">
                 <AdminKycApprove />
+              </div>
+            </div>
+          )}
+          {activeSection === "top-up-admin" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="p-6">
+               <TopUpConfirm/>
               </div>
             </div>
           )}
 
           {activeSection === "notice-change" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-6 border-b border-purple-200">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-500 rounded-xl">
-                    <Bell className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Notice Change</h2>
-                    <p className="text-gray-600">Manage system notifications</p>
-                  </div>
-                </div>
-              </div>
               <div className="p-6">
                 <div className="text-gray-600">Notice Change Component Content</div>
               </div>
