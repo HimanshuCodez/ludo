@@ -15,7 +15,7 @@ export function Pay() {
   const auth = getAuth();
   const user = auth.currentUser;
   const transactionId = Date.now().toString();
-  const upiId = 'khushisantoshi21@okaxis'; // update for production
+  const upiId = 'himanshugaur0551@ptyes'; // update for production
 
   // ⏳ Countdown timer
   useEffect(() => {

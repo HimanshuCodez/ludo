@@ -7,27 +7,23 @@ import { History } from "./pages/History";
 import { MyWallet } from "./pages/MyWallet";
 import { Notifications } from "./pages/Notifications";
 import { Support } from "./pages/Support";
-
 import { Matchmaking } from "./pages/Matchmaking"; // Assuming Matchmaking is in ./pages
 import  {GameRoom}  from "./pages/GameRoom"; // <-- Naya import: GameRoom component ko import karein
 import { PrivateRoute } from "./Admin/PrivateRoute";
 import Dashboard from "./Admin/Dashboard";
-
 import AuthPage from "./pages/AuthPage";
 import KycVerify from "./pages/KycVerify";
 import { Pay } from "./pages/Pay";
 import { PaymentConfirmation } from "./pages/PaymentConfirmation";
 import { AuthProvider } from "./context/AuthContext";
-
 import Withdraw from "./pages/Withdraw";
-
 import WinApprove from "./Admin/WinApprove";
 import WithdrawAdmin from "./Admin/AdminWithdraw";
 import AdminKycApprove from "./Admin/AdminKycApprove";
 import NoticeChange from "./Admin/NoticeChange";
-
-
-
+import TopUpConfirm from "./Admin/TopUpConfirm";
+import BarcodeManager from "./Admin/BarCode";
+import Barcode from "./Admin/BarCode";
 
 function App() {
   return (
@@ -36,7 +32,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path='/' element={<AuthPage />} />
-           ]
+           
         <Route path="/home" element={ <PrivateRoute><Home /></PrivateRoute>} />
           <Route path='/Profile' element={<Profile />} />
           <Route path='/AddCash' element={<AddCash />} />
@@ -54,8 +50,9 @@ function App() {
           <Route path='/Win-Approve' element={<WinApprove />} />
           <Route path='/notice-change' element={<NoticeChange />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
+          <Route path="/Admin-TopUp" element={<TopUpConfirm />} />
+          <Route path="/Admin-BarCode" element={<Barcode />} />
        
-        
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard/></PrivateRoute>} />
