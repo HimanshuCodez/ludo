@@ -12,6 +12,8 @@ export default function AuthPage() {
   const [referral, setReferral] = useState("");
   const [name, setName] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
 
   // Redirect if already logged in and user exists in Firestore
@@ -51,7 +53,17 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, [confirmationResult]);
 
-  const sendOTP = async () => {
+   useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setOtpSent(false);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const sendOTP = async () => {""
     const auth = getAuth();
     const appVerifier = window.recaptchaVerifier;
     const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
@@ -63,8 +75,11 @@ export default function AuthPage() {
         appVerifier
       );
       setConfirmationResult(result);
+      setOtpSent(true);
       console.log("Confirmation Result:", result);
       alert("OTP sent");
+      setCountdown(60);
+      setTimeout(() => setOtpSent(false), 60000);
     } catch (error) {
       console.error("OTP Error", error);
       alert("OTP failed: " + error.message);
@@ -180,9 +195,13 @@ export default function AuthPage() {
 
         <button
           onClick={sendOTP}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-bold mt-4 transition duration-300"
-        >
-          Send OTP
+          disabled={otpSent}
+          className={`w-full text-white py-2 rounded-lg font-bold mt-4 transition duration-300 ${
+            otpSent
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-700"
+          }`}>
+          {otpSent ? `Resend OTP in ${countdown}s` : "Send OTP"}
         </button>
 
         <label className="block mt-6 mb-2 text-sm font-semibold text-gray-700">
