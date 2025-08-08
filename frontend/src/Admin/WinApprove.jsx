@@ -33,7 +33,7 @@ const WinApprove = () => {
       try {
         const q = query(
           collection(db, 'users'),
-          where('lastgameURl', '==', 'pending')
+          where('lastGameProofUrl', '==', 'pending')
         );
         const querySnapshot = await getDocs(q);
         const matchesWithUserData = await Promise.all(

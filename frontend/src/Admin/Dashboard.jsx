@@ -1,88 +1,308 @@
 import React, { useState } from "react";
+import { 
+  Menu, 
+  X, 
+  Trophy, 
+  CreditCard, 
+  FileCheck, 
+  Bell,
+  Settings,
+  Home,
+  BarChart3,
+  Users
+} from "lucide-react";
 import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
-import { Menu, X } from "lucide-react"; // or any icons
-import { Link } from "react-router-dom";
+
+// Mock components - replace with your actual components
+
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("dashboard");
+
+  const navigationItems = [
+    { 
+      icon: Trophy, 
+      label: "Win Approve", 
+      key: "win-approve",
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50 hover:bg-yellow-100"
+    },
+    { 
+      icon: CreditCard, 
+      label: "Withdraw", 
+      key: "withdraw-admin",
+      color: "text-green-600",
+      bgColor: "bg-green-50 hover:bg-green-100"
+    },
+    { 
+      icon: FileCheck, 
+      label: "KYC Approve", 
+      key: "kyc-admin",
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 hover:bg-blue-100"
+    },
+    { 
+      icon: Bell, 
+      label: "Notice Change", 
+      key: "notice-change",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 hover:bg-purple-100"
+    }
+  ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Sidebar */}
       <div
-        className={`fixed z-20 inset-y-0 left-0 w-64 transition-transform transform bg-white shadow-lg lg:translate-x-0 ${
+        className={`fixed z-20 inset-y-0 left-0 w-72 transition-all duration-300 transform bg-white shadow-2xl lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Admin Panel</h2>
+        {/* Sidebar Header */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <Settings className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Admin Panel</h2>
+              <p className="text-blue-100 text-sm">Dashboard Control</p>
+            </div>
+          </div>
         </div>
-        <nav className="p-4 space-y-4">
-          <Link to={"/Win-Approve"}>
-            <button className="w-full text-left text-gray-700">
-              🏆 Win Approve
-            </button>
-          </Link>
-          <Link to={"/Withdraw-admin"}>
-            <button className="w-full text-left text-gray-700">
-              💸 Withdraw
-            </button>
-          </Link>
-          <Link to={"/Kyc-Admin"}>
-            {" "}
-            <button className="w-full text-left text-gray-700">
-              📄  KYC Approve
-            </button>
-          </Link>
-          <Link to={"/notice-change"}>
-            {" "}
-            <button className="w-full text-left text-gray-700">
-              📄 Notice Change
-              
-            </button>
-          </Link>
+
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          <button 
+            onClick={() => setActiveSection("dashboard")}
+            className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left ${
+              activeSection === "dashboard" 
+                ? "bg-blue-50 border-blue-200 shadow-sm" 
+                : "bg-gray-50 hover:bg-gray-100 border-transparent hover:border-gray-200 hover:shadow-sm"
+            } border`}
+          >
+            <div className={`p-2 rounded-lg ${
+              activeSection === "Dashboard" ? "text-blue-600 bg-white" : "text-gray-600 bg-white"
+            } shadow-sm group-hover:shadow-md transition-shadow`}>
+              <Home className="h-5 w-5" />
+            </div>
+            <span>Dashboard</span>
+          </button>
+          
+          {navigationItems.map((item, index) => {
+            const IconComponent = item.icon;
+            return (
+              <button 
+                key={index}
+                onClick={() => setActiveSection(item.key)}
+                className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left ${
+                  activeSection === item.key 
+                    ? `${item.bgColor.split(' ')[0]} border-${item.color.split('-')[1]}-200 shadow-sm` 
+                    : `${item.bgColor} border-transparent hover:border-gray-200 hover:shadow-sm`
+                } border`}
+              >
+                <div className={`p-2 rounded-lg ${item.color} bg-white shadow-sm group-hover:shadow-md transition-shadow`}>
+                  <IconComponent className="h-5 w-5" />
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-gray-900">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
+
+        {/* Sidebar Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+          <div className="flex items-center space-x-3 px-4 py-3 bg-gray-50 rounded-xl">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">Administrator</p>
+              <p className="text-sm text-gray-500">Online</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-30 lg:hidden z-10"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm lg:hidden z-10 transition-opacity"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-72">
         {/* Top Bar */}
-        <header className="flex items-center justify-between p-4 bg-white shadow-md">
-          <button
-            className="lg:hidden text-gray-700"
-            onClick={() => setSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-          <h1 className="text-xl font-bold">Dashboard</h1>
+        <header className="flex items-center justify-between p-6 bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
+          <div className="flex items-center space-x-4">
+            <button
+              className="lg:hidden p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+              onClick={() => setSidebarOpen(!isSidebarOpen)}
+            >
+              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <p className="text-sm text-gray-500">Welcome back, Admin</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors relative">
+              <Bell className="h-5 w-5 text-gray-600" />
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+            </button>
+          </div>
         </header>
 
         {/* Content */}
-        <main className="p-6 overflow-y-auto space-y-6">
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <h2 className="text-lg font-semibold mb-4">Win Approve</h2>
-            <WinApprove />
-          </div>
+        <main className="flex-1 p-6 overflow-y-auto space-y-8">
+          {activeSection === "dashboard" && (
+            <>
+            
+              {/* Main Content Sections */}
+              <div className="space-y-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-yellow-500 rounded-xl">
+                        <Trophy className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-800">Win Approve</h2>
+                        <p className="text-gray-600">Manage game win approvals</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <WinApprove />
+                  </div>
+                </div>
 
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <h2 className="text-lg font-semibold mb-4">Withdraw Requests</h2>
-            <WithdrawAdmin />
-          </div>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 border-b border-green-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-500 rounded-xl">
+                        <CreditCard className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-800">Withdraw Requests</h2>
+                        <p className="text-gray-600">Process user withdrawal requests</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <WithdrawAdmin />
+                  </div>
+                </div>
 
-          <div className="bg-white rounded-xl shadow-md p-4">
-            <h2 className="text-lg font-semibold mb-4">KYC Approve</h2>
-            <AdminKycApprove />
-          </div>
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 border-b border-blue-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-500 rounded-xl">
+                        <FileCheck className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-800">KYC Approve</h2>
+                        <p className="text-gray-600">Review and approve user verification</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <AdminKycApprove />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeSection === "win-approve" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-yellow-500 rounded-xl">
+                    <Trophy className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Win Approve</h2>
+                    <p className="text-gray-600">Manage game win approvals</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <WinApprove />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "withdraw-admin" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 border-b border-green-200">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-500 rounded-xl">
+                    <CreditCard className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Withdraw Requests</h2>
+                    <p className="text-gray-600">Process user withdrawal requests</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <WithdrawAdmin />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "kyc-admin" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 border-b border-blue-200">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-500 rounded-xl">
+                    <FileCheck className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">KYC Approve</h2>
+                    <p className="text-gray-600">Review and approve user verification</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <AdminKycApprove />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "notice-change" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-6 border-b border-purple-200">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-500 rounded-xl">
+                    <Bell className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Notice Change</h2>
+                    <p className="text-gray-600">Manage system notifications</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="text-gray-600">Notice Change Component Content</div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
