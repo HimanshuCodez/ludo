@@ -80,7 +80,7 @@ Download now and start winning!
 
 Register and Play Here 
 👇👇👇👇👇👇👇👇
-https://ludo-zeta-self.vercel.app
+https://lifeludo.in
 `;
 
     // Encode the message for URL

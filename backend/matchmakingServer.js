@@ -17,7 +17,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://ludo-zeta-self.vercel.app",
+      "https://lifeludo.in",
       "http://localhost:5173",
     ],
     methods: ["GET", "POST"],

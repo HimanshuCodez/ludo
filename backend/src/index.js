@@ -4,7 +4,7 @@ const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser')
 app.use(cors({
-    origin: 'https://ludo-zeta-self.vercel.app'
+    origin: 'https://lifeludo.in'
 }));
 
 app.use(bodyParser.json());
