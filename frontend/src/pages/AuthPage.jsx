@@ -15,6 +15,9 @@ export default function AuthPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+
 
   // Redirect if already logged in and user exists in Firestore
   useEffect(() => {
@@ -63,7 +66,16 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  const sendOTP = async () => {""
+  const sendOTP = async () => {
+    if (isSendingOTP || otpSent) {
+      return;
+    }
+    if (!phone || phone.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setIsSendingOTP(true);
     const auth = getAuth();
     const appVerifier = window.recaptchaVerifier;
     const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
@@ -76,13 +88,16 @@ export default function AuthPage() {
       );
       setConfirmationResult(result);
       setOtpSent(true);
-      console.log("Confirmation Result:", result);
-      alert("OTP sent");
       setCountdown(60);
-      setTimeout(() => setOtpSent(false), 60000);
+      if (step === 1) {
+        setStep(2);
+      }
+      alert("OTP sent");
     } catch (error) {
       console.error("OTP Error", error);
       alert("OTP failed: " + error.message);
+    } finally {
+      setIsSendingOTP(false);
     }
   };
 
@@ -151,76 +166,117 @@ export default function AuthPage() {
         <h2 className="text-3xl font-bold text-center text-purple-700 mb-4">
           🎲 Ludo Login
         </h2>
-        <label className="block mt-4 mb-2 text-sm font-semibold text-gray-700">
-          Name
-        </label>
-        <input
-          type="text"
-          placeholder="Enter your name"
-          maxLength={30}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
-
-        <label className="block mb-2 text-sm font-semibold text-gray-700">
-          Phone Number
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="bg-gray-200 px-3 py-2 rounded-md text-gray-600">
-            +91
-          </span>
-          <input
-            type="tel"
-            placeholder="Enter 10-digit number"
-            maxLength={10}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-            className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+        
+        {/* Stepper */}
+        <div className="flex items-center justify-center mb-6">
+          <div className={`flex items-center ${step >= 1 ? 'text-purple-700' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-purple-700 text-white' : 'bg-gray-300'}`}>1</div>
+            <span className="ml-2 font-semibold">Details</span>
+          </div>
+          <div className={`flex-1 h-1 mx-4 ${step > 1 ? 'bg-purple-700' : 'bg-gray-300'}`}></div>
+          <div className={`flex items-center ${step >= 2 ? 'text-purple-700' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-purple-700 text-white' : 'bg-gray-300'}`}>2</div>
+            <span className="ml-2 font-semibold">Verify</span>
+          </div>
         </div>
 
-        <label className="block mt-4 mb-2 text-sm font-semibold text-gray-700">
-          Referral Code{" "}
-          <span className="text-xs text-gray-400">(optional)</span>
-        </label>
-        <input
-          type="text"
-          placeholder="Referral code"
-          maxLength={8}
-          value={referral}
-          onChange={(e) => setReferral(e.target.value.toUpperCase())}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        {step === 1 && (
+          <>
+            <label className="block mt-4 mb-2 text-sm font-semibold text-gray-700">
+              Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your name"
+              maxLength={30}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
 
-        <button
-          onClick={sendOTP}
-          disabled={otpSent}
-          className={`w-full text-white py-2 rounded-lg font-bold mt-4 transition duration-300 ${
-            otpSent
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-purple-600 hover:bg-purple-700"
-          }`}>
-          {otpSent ? `Resend OTP in ${countdown}s` : "Send OTP"}
-        </button>
+            <label className="block mt-4 mb-2 text-sm font-semibold text-gray-700">
+              Phone Number
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="bg-gray-200 px-3 py-2 rounded-md text-gray-600">
+                +91
+              </span>
+              <input
+                type="tel"
+                placeholder="Enter 10-digit number"
+                maxLength={10}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
 
-        <label className="block mt-6 mb-2 text-sm font-semibold text-gray-700">
-          Enter OTP
-        </label>
-        <input
-          type="text"
-          placeholder="Enter OTP"
-          value={otp}
-          onChange={(e) => setOtp(e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+            <label className="block mt-4 mb-2 text-sm font-semibold text-gray-700">
+              Referral Code{" "}
+              <span className="text-xs text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Referral code"
+              maxLength={8}
+              value={referral}
+              onChange={(e) => setReferral(e.target.value.toUpperCase())}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
 
-        <button
-          onClick={verifyOTP}
-          className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-bold mt-4 transition duration-300"
-        >
-          Verify OTP
-        </button>
+            <button
+              onClick={sendOTP}
+              disabled={isSendingOTP}
+              className={`w-full text-white py-2 rounded-lg font-bold mt-4 transition duration-300 ${
+                isSendingOTP
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-700"
+              }`}>
+              {isSendingOTP ? "Sending..." : "Send OTP"}
+            </button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="text-center text-gray-600 mb-4">
+              Enter the OTP sent to <strong>+91 {phone}</strong>.
+            </p>
+            <label className="block mt-6 mb-2 text-sm font-semibold text-gray-700">
+              Enter OTP
+            </label>
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+
+            <button
+              onClick={verifyOTP}
+              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-bold mt-4 transition duration-300"
+            >
+              Verify OTP
+            </button>
+
+            <div className="mt-4 flex justify-between items-center">
+              <button onClick={() => setStep(1)} className="text-sm text-gray-500 hover:underline">
+                Change number
+              </button>
+              <button
+                onClick={sendOTP}
+                disabled={otpSent || isSendingOTP}
+                className={`text-sm font-semibold ${
+                  otpSent || isSendingOTP
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-purple-600 hover:underline"
+                }`}>
+                {isSendingOTP ? "Sending..." : (otpSent ? `Resend in ${countdown}s` : "Resend OTP")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div id="recaptcha-container"></div>
