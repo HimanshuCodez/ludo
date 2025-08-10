@@ -11,14 +11,16 @@ import {
   BarChart3,
   Users,
   DollarSign,
-  Barcode
+  Barcode,
+  IndianRupee
 } from "lucide-react";
 import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
-import Barcode from "./BarCode";
+import AdminBarcode from "./AdminBarCode";
+
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -62,7 +64,7 @@ const Dashboard = () => {
     { 
       icon: Barcode, 
       label: "Barcode Manager", 
-      key: "Admin-BarCode",
+      key: "admin-barCode",
       color: "text-purple-600",
       bgColor: "bg-purple-50 hover:bg-purple-100"
     }
@@ -191,7 +193,7 @@ const Dashboard = () => {
                   <div className="bg-gradient-to-r from-pink-50 to-pink-100 p-6 border-b border-pink-200">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-pink-500 rounded-xl">
-                        <DollarSign className="h-6 w-6 text-white" />
+                        <IndianRupee className="h-6 w-6 text-white" />
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-gray-800">Top Up Requests</h2>
@@ -237,10 +239,10 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          {activeSection === "Admin-BarCode" && (
+          {activeSection === "admin-barCode" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-               <Barcode/>
+           <AdminBarcode/>
               </div>
             </div>
           )}
