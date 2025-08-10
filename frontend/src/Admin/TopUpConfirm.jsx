@@ -13,7 +13,8 @@ import {
   ImageIcon,
   ZoomIn,
   ZoomOut,
-  RotateCw
+  RotateCw,
+  IndianRupee
 } from 'lucide-react'
 
 const TopUpConfirm = () => {
@@ -152,7 +153,7 @@ const TopUpConfirm = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-600 flex items-center">
-                          <DollarSign className="w-4 h-4" />
+                          <IndianRupee className="w-4 h-4" />
                           {request.amount}
                         </p>
                         <span className="inline-block mt-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">

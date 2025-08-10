@@ -10,14 +10,15 @@ import {
   Home,
   BarChart3,
   Users,
-  DollarSign
+  DollarSign,
+  Barcode
 } from "lucide-react";
 import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
-
+import Barcode from "./BarCode";
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -55,6 +56,13 @@ const Dashboard = () => {
       icon: Bell, 
       label: "Notice Change", 
       key: "notice-change",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 hover:bg-purple-100"
+    },
+    { 
+      icon: Barcode, 
+      label: "Barcode Manager", 
+      key: "Admin-BarCode",
       color: "text-purple-600",
       bgColor: "bg-purple-50 hover:bg-purple-100"
     }
@@ -226,6 +234,13 @@ const Dashboard = () => {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
                <TopUpConfirm/>
+              </div>
+            </div>
+          )}
+          {activeSection === "Admin-BarCode" && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="p-6">
+               <Barcode/>
               </div>
             </div>
           )}
