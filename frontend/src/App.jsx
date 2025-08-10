@@ -22,8 +22,8 @@ import WithdrawAdmin from "./Admin/AdminWithdraw";
 import AdminKycApprove from "./Admin/AdminKycApprove";
 import NoticeChange from "./Admin/NoticeChange";
 import TopUpConfirm from "./Admin/TopUpConfirm";
-import BarcodeManager from "./Admin/BarCode";
-import Barcode from "./Admin/BarCode";
+import AdminBarcode from "./Admin/AdminBarCode";
+
 
 function App() {
   return (
@@ -51,7 +51,7 @@ function App() {
           <Route path='/notice-change' element={<NoticeChange />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
           <Route path="/Admin-TopUp" element={<TopUpConfirm />} />
-          <Route path="/Admin-BarCode" element={<Barcode />} />
+          <Route path="/Admin-BarCode" element={<AdminBarcode />} />
        
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}

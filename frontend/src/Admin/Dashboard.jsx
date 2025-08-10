@@ -64,7 +64,7 @@ const Dashboard = () => {
     { 
       icon: Barcode, 
       label: "Barcode Manager", 
-      key: "admin-barCode",
+      key: "admin-barcode",
       color: "text-purple-600",
       bgColor: "bg-purple-50 hover:bg-purple-100"
     }
@@ -239,7 +239,7 @@ const Dashboard = () => {
               </div>
             </div>
           )}
-          {activeSection === "admin-barCode" && (
+          {activeSection === "admin-barcode" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
            <AdminBarcode/>
