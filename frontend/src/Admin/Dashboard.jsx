@@ -21,6 +21,7 @@ import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
 import AdminBarcode from "./AdminBarCode";
 
+
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -242,7 +243,7 @@ const Dashboard = () => {
           {activeSection === "admin-barcode" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-           <AdminBarcode/>
+       <AdminBarcode/>
               </div>
             </div>
           )}
