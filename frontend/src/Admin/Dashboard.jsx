@@ -16,6 +16,7 @@ import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
+import NoticeChange from "./NoticeChange";
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -160,7 +161,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, Admin</p>
+                <p className="text-sm text-gray-500">Welcome back, Imran Khan</p>
               </div>
             </div>
           </div>
@@ -232,7 +233,7 @@ const Dashboard = () => {
           {activeSection === "notice-change" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-                <div className="text-gray-600">Notice Change Component Content</div>
+              <NoticeChange />
               </div>
             </div>
           )}
