@@ -140,18 +140,7 @@ const Dashboard = () => {
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3 px-4 py-3 bg-gray-50 rounded-xl">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Administrator</p>
-              <p className="text-sm text-gray-500">Online : Imran Khan</p>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* Overlay for mobile */}

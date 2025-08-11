@@ -129,7 +129,7 @@ const handleLogout = async () => {
                   </div>
                 </button>
               </Link>
-              <Link to={userDoc?.role === "admin" ? "/Admin-Barcode" : "/Abc"}>
+              {/* <Link to={userDoc?.role === "admin" ? "/Admin-Barcode" : "/Abc"}>
                 <button className=" text-black bg-primary font-roboto text-[17px]">
                   <div className="flex ml-[26px] items-center">
                     <img src={accountLogo} className="w-8" alt="Account" />
@@ -140,7 +140,7 @@ const handleLogout = async () => {
                     </p>
                   </div>
                 </button>
-              </Link>
+              </Link> */}
             </div>
             <ul className="">
               <li className="p-[4px] bg-menu-base">
