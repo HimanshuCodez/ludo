@@ -129,6 +129,18 @@ const handleLogout = async () => {
                   </div>
                 </button>
               </Link>
+              <Link to={userDoc?.role === "admin" ? "/Admin-Barcode" : "/Profile"}>
+                <button className=" text-black bg-primary font-roboto text-[17px]">
+                  <div className="flex ml-[26px] items-center">
+                    <img src={accountLogo} className="w-8" alt="Account" />
+                    <p className="ml-[12px]">
+                      {userDoc?.role === "admin"
+                        ? "BarCode Change"
+                        : "My Profile"}
+                    </p>
+                  </div>
+                </button>
+              </Link>
             </div>
             <ul className="">
               <li className="p-[4px] bg-menu-base">
