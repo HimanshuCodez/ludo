@@ -19,7 +19,7 @@ import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
-import AdminBarcode from "./AdminBarCode";
+import AdminBarcode from "./AdminBarcode";
 
 
 const Dashboard = () => {

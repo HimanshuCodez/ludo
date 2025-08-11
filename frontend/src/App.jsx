@@ -22,7 +22,7 @@ import WithdrawAdmin from "./Admin/AdminWithdraw";
 import AdminKycApprove from "./Admin/AdminKycApprove";
 import NoticeChange from "./Admin/NoticeChange";
 import TopUpConfirm from "./Admin/TopUpConfirm";
-import AdminBarcode from "./Admin/AdminBarCode";
+import AdminBarcode from "./Admin/AdminBarcode";
 
 
 
