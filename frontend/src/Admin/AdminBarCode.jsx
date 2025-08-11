@@ -26,29 +26,6 @@ const AdminBarcode = () => {
   const fileInputRef = useRef(null)
 
   // Mock barcode history data
-  const barcodeHistory = [
-    {
-      id: 1,
-      name: 'Payment QR Code v1',
-      uploadDate: '2024-08-08 10:30:00',
-      status: 'current',
-      image: 'https://via.placeholder.com/400x200/2563eb/ffffff?text=QR+Code+Sample'
-    },
-    {
-      id: 2,
-      name: 'UPI Payment QR v2',
-      uploadDate: '2024-08-07 15:45:22',
-      status: 'archived',
-      image: 'https://via.placeholder.com/400x200/059669/ffffff?text=Previous+QR'
-    },
-    {
-      id: 3,
-      name: 'Bank Transfer QR',
-      uploadDate: '2024-08-06 09:15:10',
-      status: 'archived',
-      image: 'https://via.placeholder.com/400x200/dc2626/ffffff?text=Old+QR+Code'
-    }
-  ]
 
   const handleDrag = (e) => {
     e.preventDefault()

@@ -19,7 +19,8 @@ import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
-import AdminBarcode from "./AdminBarcode";
+import AdminBarcode from "./AdminBarCode";
+
 
 
 const Dashboard = () => {
@@ -141,7 +142,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="font-medium text-gray-700">Administrator</p>
-              <p className="text-sm text-gray-500">Online</p>
+              <p className="text-sm text-gray-500">Online : Imran Khan</p>
             </div>
           </div>
         </div>
