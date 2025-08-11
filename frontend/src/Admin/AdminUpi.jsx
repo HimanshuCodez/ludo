@@ -15,7 +15,7 @@ import {
   FileImage
 } from 'lucide-react'
 
-const AdminBarcode = () => {
+const AdminUpi = () => {
   const [currentBarcode, setCurrentBarcode] = useState('https://via.placeholder.com/400x200/2563eb/ffffff?text=QR+Code+Sample')
   const [isEditing, setIsEditing] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
@@ -308,4 +308,4 @@ const AdminBarcode = () => {
   )
 }
 
-export default AdminBarcode
+export default AdminUpi

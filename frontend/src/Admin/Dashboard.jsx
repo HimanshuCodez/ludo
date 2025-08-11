@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { 
-  Menu, 
-  X, 
-  Trophy, 
-  CreditCard, 
-  FileCheck, 
+import {
+  Menu,
+  X,
+  Trophy,
+  CreditCard,
+  FileCheck,
   Bell,
   Settings,
   Home,
@@ -12,68 +12,69 @@ import {
   Users,
   DollarSign,
   Barcode,
-  IndianRupee
+  IndianRupee,
 } from "lucide-react";
 import WinApprove from "./WinApprove";
 import WithdrawAdmin from "./AdminWithdraw";
 import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
-import AdminBarcode from "./AdminBarCode";
-
-
+import AdminBarcode from "./AdminUpi";
+import AdminUpi from "./AdminUpi";
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
 
   const navigationItems = [
-    { 
-      icon: Barcode, 
-      label: "Barcode Manager", 
-      key: "admin-barcode",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 hover:bg-purple-100"
-    },
-    { 
-      icon: Trophy, 
-      label: "Win Approve", 
+    {
+      icon: Trophy,
+      label: "Win Approve",
       key: "win-approve",
       color: "text-yellow-600",
-      bgColor: "bg-yellow-50 hover:bg-yellow-100"
+      bgColor: "bg-yellow-50 hover:bg-yellow-100",
     },
-    { 
-      icon: CreditCard, 
-      label: "Withdraw", 
+    {
+      icon: CreditCard,
+      label: "Withdraw",
       key: "withdraw-admin",
       color: "text-green-600",
-      bgColor: "bg-green-50 hover:bg-green-100"
+      bgColor: "bg-green-50 hover:bg-green-100",
     },
-    { 
-      icon: FileCheck, 
-      label: "KYC Approve", 
+    {
+      icon: FileCheck,
+      label: "KYC Approve",
       key: "kyc-admin",
       color: "text-blue-600",
-      bgColor: "bg-blue-50 hover:bg-blue-100"
+      bgColor: "bg-blue-50 hover:bg-blue-100",
     },
-    { 
-      icon: DollarSign, 
-      label: "Top Up Requests", 
+    {
+      icon: DollarSign,
+      label: "Top Up Requests",
       key: "top-up-admin",
       color: "text-pink-600",
-      bgColor: "bg-pink-50 hover:bg-pink-100"
+      bgColor: "bg-pink-50 hover:bg-pink-100",
     },
-    { 
-      icon: Bell, 
-      label: "Notice Change", 
+    {
+      icon: Bell,
+      label: "Notice Change",
       key: "notice-change",
       color: "text-purple-600",
-      bgColor: "bg-purple-50 hover:bg-purple-100"
-    }
+      bgColor: "bg-purple-50 hover:bg-purple-100",
+    },
+    {
+      icon: Barcode,
+      label: "Barcode Manager",
+      key: "admin-barcode",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 hover:bg-purple-100",
+    },
   ];
 
   return (
+    
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <AdminUpi/>
       {/* Sidebar */}
       <div
         className={`fixed z-20 inset-y-0 left-0 w-72 transition-all duration-300 transform bg-white shadow-2xl lg:translate-x-0 ${
@@ -95,35 +96,43 @@ const Dashboard = () => {
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
-          <button 
+          <button
             onClick={() => setActiveSection("dashboard")}
             className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left ${
-              activeSection === "dashboard" 
-                ? "bg-blue-50 border-blue-200 shadow-sm" 
+              activeSection === "dashboard"
+                ? "bg-blue-50 border-blue-200 shadow-sm"
                 : "bg-gray-50 hover:bg-gray-100 border-transparent hover:border-gray-200 hover:shadow-sm"
             } border`}
           >
-            <div className={`p-2 rounded-lg ${
-              activeSection === "dashboard" ? "text-blue-600 bg-white" : "text-gray-600 bg-white"
-            } shadow-sm group-hover:shadow-md transition-shadow`}>
+            <div
+              className={`p-2 rounded-lg ${
+                activeSection === "dashboard"
+                  ? "text-blue-600 bg-white"
+                  : "text-gray-600 bg-white"
+              } shadow-sm group-hover:shadow-md transition-shadow`}
+            >
               <Home className="h-5 w-5" />
             </div>
             <span>Dashboard</span>
           </button>
-          
+
           {navigationItems.map((item, index) => {
             const IconComponent = item.icon;
             return (
-              <button 
+              <button
                 key={index}
                 onClick={() => setActiveSection(item.key)}
                 className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left ${
-                  activeSection === item.key 
-                    ? `${item.bgColor.split(' ')[0]} border-${item.color.split('-')[1]}-200 shadow-sm` 
+                  activeSection === item.key
+                    ? `${item.bgColor.split(" ")[0]} border-${
+                        item.color.split("-")[1]
+                      }-200 shadow-sm`
                     : `${item.bgColor} border-transparent hover:border-gray-200 hover:shadow-sm`
                 } border`}
               >
-                <div className={`p-2 rounded-lg ${item.color} bg-white shadow-sm group-hover:shadow-md transition-shadow`}>
+                <div
+                  className={`p-2 rounded-lg ${item.color} bg-white shadow-sm group-hover:shadow-md transition-shadow`}
+                >
                   <IconComponent className="h-5 w-5" />
                 </div>
                 <span className="font-medium text-gray-700 group-hover:text-gray-900">
@@ -173,11 +182,13 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, Imran Khan</p>
+                <p className="text-sm text-gray-500">
+                  Welcome back, Imran Khan
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <button className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors relative">
               <Bell className="h-5 w-5 text-gray-600" />
@@ -198,8 +209,12 @@ const Dashboard = () => {
                         <IndianRupee className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-gray-800">Top Up Requests</h2>
-                        <p className="text-gray-600">Process user top-up requests</p>
+                        <h2 className="text-xl font-bold text-gray-800">
+                          Top Up Requests
+                        </h2>
+                        <p className="text-gray-600">
+                          Process user top-up requests
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -237,14 +252,14 @@ const Dashboard = () => {
           {activeSection === "top-up-admin" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-               <TopUpConfirm/>
+                <TopUpConfirm />
               </div>
             </div>
           )}
           {activeSection === "admin-barcode" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-       <AdminBarcode/>
+                <AdminUpi/>
               </div>
             </div>
           )}
@@ -252,7 +267,7 @@ const Dashboard = () => {
           {activeSection === "notice-change" && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-              <NoticeChange />
+                <NoticeChange />
               </div>
             </div>
           )}
