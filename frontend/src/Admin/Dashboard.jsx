@@ -28,6 +28,13 @@ const Dashboard = () => {
 
   const navigationItems = [
     { 
+      icon: Barcode, 
+      label: "Barcode Manager", 
+      key: "admin-barcode",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 hover:bg-purple-100"
+    },
+    { 
       icon: Trophy, 
       label: "Win Approve", 
       key: "win-approve",
@@ -59,13 +66,6 @@ const Dashboard = () => {
       icon: Bell, 
       label: "Notice Change", 
       key: "notice-change",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 hover:bg-purple-100"
-    },
-    { 
-      icon: Barcode, 
-      label: "Barcode Manager", 
-      key: "admin-barcode",
       color: "text-purple-600",
       bgColor: "bg-purple-50 hover:bg-purple-100"
     }
