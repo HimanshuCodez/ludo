@@ -26,6 +26,7 @@ import AdminBarcode from "./Admin/AdminBarcode";
 
 
 
+
 function App() {
   return (
     <div>
@@ -52,7 +53,7 @@ function App() {
           <Route path='/notice-change' element={<NoticeChange />} />
           <Route path="/PaymentConfirmation" element={<PaymentConfirmation />} />
           <Route path="/Admin-TopUp" element={<TopUpConfirm />} />
-          <Route path="/Admin-BarCode" element={<AdminBarcode />} />
+          <Route path="/Admin-BarCode" element={<AdminBarcode/>} />
        
           {/* Naya Route: GameRoom component ke liye dynamic route */}
           <Route path='/room/:roomId' element={<GameRoom />} /> {/* <-- Ye line add karein */}
