@@ -16,4 +16,5 @@ export function History() {
         </div>
         <Footer></Footer>
     </div>
+     
 }
