@@ -126,7 +126,92 @@ const AdminUpi = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
+          {/* Current Barcode Display */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+              <h2 className="text-xl font-bold flex items-center">
+                <Image className="w-6 h-6 mr-2" />
+                Current Active Barcode
+              </h2>
+            </div>
+
+            <div className="p-6">
+              {/* Image Controls */}
+              {isEditing && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Preview Controls</span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => adjustZoom(-25)}
+                      className="p-2 rounded-lg bg-white hover:bg-gray-100 shadow-sm transition-colors"
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm text-gray-600 px-2">{zoom}%</span>
+                    <button
+                      onClick={() => adjustZoom(25)}
+                      className="p-2 rounded-lg bg-white hover:bg-gray-100 shadow-sm transition-colors"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={rotateImage}
+                      className="p-2 rounded-lg bg-white hover:bg-gray-100 shadow-sm transition-colors"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Barcode Display */}
+              <div className="bg-gray-100 rounded-lg p-6 flex justify-center mb-6">
+                <div className="max-w-sm overflow-hidden">
+                  <img
+                    src={isEditing && uploadedFile ? uploadedFile.preview : currentBarcode}
+                    alt="Current Barcode"
+                    className="w-full h-auto rounded-lg shadow-md transition-transform duration-300"
+                    style={{
+                      transform: `scale(${zoom / 100}) rotate(${rotation}deg)`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSave}
+                      className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center"
+                    >
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      Upload New
+                    </button>
+                 
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Upload Area & History */}
           <div className="space-y-6">
