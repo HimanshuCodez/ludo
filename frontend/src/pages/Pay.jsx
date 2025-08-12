@@ -3,7 +3,8 @@ import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-import QRCode from 'react-qr-code';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export function Pay() {
   const [amount] = useState(window.localStorage.getItem('Amount') || 0);
@@ -11,11 +12,30 @@ export function Pay() {
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [barcodeUrl, setBarcodeUrl] = useState('');
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
   const transactionId = Date.now().toString();
   const upiId = 'himanshugaur0551@ptyes'; // update for production
+
+  useEffect(() => {
+    const fetchBarcode = async () => {
+      try {
+        const docRef = doc(db, 'users', 'upi_barcode');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setBarcodeUrl(docSnap.data().NewBarcode);
+        } else {
+          setError('Could not find payment QR code.');
+        }
+      } catch (err) {
+        setError('Failed to load payment QR code.');
+        console.error(err);
+      }
+    };
+    fetchBarcode();
+  }, []);
 
   // ⏳ Countdown timer
   useEffect(() => {
@@ -81,7 +101,13 @@ export function Pay() {
             </p>
 
             <div className="mb-5 bg-white p-2 rounded">
-              <QRCode value={upiString} size={200} />
+              {barcodeUrl ? (
+                <img src={barcodeUrl} alt="Payment QR Code" style={{ width: 200, height: 200 }} />
+              ) : (
+                <div className="w-[200px] h-[200px] bg-gray-200 animate-pulse flex items-center justify-center">
+                  <p className="text-gray-500">Loading QR...</p>
+                </div>
+              )}
             </div>
 
             <p className="text-lg font-mono mb-5 text-yellow-300">

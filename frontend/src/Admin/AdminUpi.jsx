@@ -14,6 +14,9 @@ import {
   Check,
   FileImage
 } from 'lucide-react'
+import { storage, db } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, setDoc } from 'firebase/firestore';
 
 const AdminUpi = () => {
   const [currentBarcode, setCurrentBarcode] = useState('https://via.placeholder.com/400x200/2563eb/ffffff?text=QR+Code+Sample')
@@ -69,18 +72,23 @@ const AdminUpi = () => {
     }
   }
 
-  const handleSave = () => {
-    // TODO: Implement your save barcode API call here
-    console.log('Saving barcode:', uploadedFile)
-    // Example API call:
-    // await saveBarcodeImage(uploadedFile.file)
-    
-    setCurrentBarcode(uploadedFile.preview)
-    setIsEditing(false)
-    setUploadedFile(null)
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
-  }
+  const handleSave = async () => {
+    if (!uploadedFile) return;
+
+    const storageRef = ref(storage, `barcodes/${uploadedFile.name}`);
+    await uploadBytes(storageRef, uploadedFile.file);
+    const downloadURL = await getDownloadURL(storageRef);
+
+    const userRef = doc(db, 'users', 'upi_barcode');
+    await setDoc(userRef, { NewBarcode: downloadURL }, { merge: true });
+
+
+    setCurrentBarcode(downloadURL);
+    setIsEditing(false);
+    setUploadedFile(null);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
 
   const handleCancel = () => {
     setIsEditing(false)
