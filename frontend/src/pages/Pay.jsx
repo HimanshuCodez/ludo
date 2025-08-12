@@ -17,10 +17,28 @@ export function Pay() {
   const auth = getAuth();
   const user = auth.currentUser;
   const transactionId = Date.now().toString();
-  const upiId = 'himanshugaur0551@ptyes'; // update for production
 
+  // Combined initialization useEffect
   useEffect(() => {
-    const fetchBarcode = async () => {
+    const initializePayment = async () => {
+      // 1. Validate user
+      if (!user) {
+        setError('Please log in to proceed with payment.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Validate amount
+      if (!amount || isNaN(amount) || amount < 10 || amount > 20000) {
+        setError('Invalid amount. Please select an amount between ₹10 and ₹20000.');
+        navigate('/AddCash');
+        setLoading(false);
+        return;
+      }
+
+      window.localStorage.setItem('TransactionId', transactionId);
+
+      // 3. Fetch barcode
       try {
         const docRef = doc(db, 'users', 'upi_barcode');
         const docSnap = await getDoc(docRef);
@@ -32,10 +50,15 @@ export function Pay() {
       } catch (err) {
         setError('Failed to load payment QR code.');
         console.error(err);
+      } finally {
+        // 4. Finish loading
+        setLoading(false);
       }
     };
-    fetchBarcode();
-  }, []);
+
+    initializePayment();
+  }, [amount, navigate, user, transactionId]);
+
 
   // ⏳ Countdown timer
   useEffect(() => {
@@ -58,27 +81,6 @@ export function Pay() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // ✅ Validate user and amount
-  useEffect(() => {
-    if (!user) {
-      setError('Please log in to proceed with payment.');
-      setLoading(false);
-      return;
-    }
-
-    if (!amount || isNaN(amount) || amount < 10 || amount > 20000) {
-      setError('Invalid amount. Please select an amount between ₹10 and ₹20000.');
-      setLoading(false);
-      navigate('/AddCash');
-      return;
-    }
-
-    window.localStorage.setItem('TransactionId', transactionId);
-    setLoading(false);
-  }, [amount, navigate, user]);
-
-  const upiString = `upi://pay?pa=${upiId}&pn=TrueWinCircle&am=${amount}&cu=INR&tr=${transactionId}`;
-
   const handleProceedToConfirm = () => {
     if (paymentStatus !== 'pending') return;
     navigate('/PaymentConfirmation');
@@ -94,7 +96,7 @@ export function Pay() {
 
         {error && <div className="text-red-500 text-center mb-4 text-lg">{error}</div>}
 
-        {!loading && paymentStatus === 'pending' && (
+        {!loading && !error && paymentStatus === 'pending' && (
           <div className="bg-opacity-5 rounded-xl shadow-xl p-6 flex flex-col items-center w-full max-w-md">
             <p className="text-lg text-center mb-3">
               Scan this QR to pay <span className="font-bold">₹{amount}</span>

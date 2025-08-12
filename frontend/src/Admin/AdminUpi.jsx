@@ -105,26 +105,8 @@ const AdminUpi = () => {
     setRotation(prev => (prev + 90) % 360)
   }
 
-  const handleDownload = () => {
-    // TODO: Implement download functionality
-    console.log('Downloading current barcode')
-    // Example: Create download link and trigger download
-  }
 
-  const handleDelete = (barcodeId) => {
-    // TODO: Implement delete barcode API call here
-    console.log('Deleting barcode:', barcodeId)
-    // Example API call:
-    // await deleteBarcodeImage(barcodeId)
-  }
 
-  const setAsActive = (barcode) => {
-    // TODO: Implement set as active barcode API call here
-    console.log('Setting as active barcode:', barcode.id)
-    // Example API call:
-    // await setActiveBarcodeImage(barcode.id)
-    setCurrentBarcode(barcode.image)
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 p-6">
