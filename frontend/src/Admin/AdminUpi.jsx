@@ -206,12 +206,7 @@ const AdminUpi = () => {
                       <Edit3 className="w-4 h-4 mr-2" />
                       Upload New
                     </button>
-                    <button
-                      onClick={handleDownload}
-                      className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                 
                   </>
                 )}
               </div>
