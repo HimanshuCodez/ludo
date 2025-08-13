@@ -174,16 +174,20 @@ export function GameRoom() {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
       e.returnValue = '';
+      console.log('BeforeUnload event prevented!'); // Log when prompt is triggered
     };
 
     if (gameStarted && !showSuccess) {
       window.addEventListener('beforeunload', handleBeforeUnload);
+      console.log('BeforeUnload listener ADDED. gameStarted:', gameStarted, 'showSuccess:', showSuccess);
     } else {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      console.log('BeforeUnload listener REMOVED. gameStarted:', gameStarted, 'showSuccess:', showSuccess);
     }
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      console.log('BeforeUnload cleanup: listener removed on unmount.');
     };
   }, [gameStarted, showSuccess]);
 
