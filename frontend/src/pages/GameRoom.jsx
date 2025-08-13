@@ -156,6 +156,23 @@ export function GameRoom() {
     };
   }, [roomId, user, userName]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    if (gameStarted && !showSuccess) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    } else {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [gameStarted, showSuccess]);
+
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
     setIsRedirecting(true);
