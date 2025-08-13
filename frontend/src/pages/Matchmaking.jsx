@@ -146,34 +146,14 @@ export function Matchmaking() {
     }
   };
 
- const VSRow = ({ playerA, playerB, amount }) => (
-  <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
-    {/* Player A */}
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-sm">
-        U
-      </div>
+  const VSRow = ({ playerA, playerB, amount }) => (
+    <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
       <span className="font-bold text-gray-700">{playerA.name}</span>
-    </div>
-
-    {/* VS */}
-    <span className="text-lg font-extrabold text-red-500 leading-none">
-      VS
-    </span>
-
-    {/* Player B */}
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-sm">
-        U
-      </div>
+      <span className="text-xl font-extrabold text-red-500">VS</span>
       <span className="font-bold text-gray-700">{playerB.name}</span>
+      <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
     </div>
-
-    {/* Amount */}
-    <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
-  </div>
-);
-
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -248,30 +228,22 @@ export function Matchmaking() {
           </div>
         </div>
 
-       <div>
-  <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
-  <div className="bg-white rounded shadow px-3 py-2">
-    {matches.length === 0 ? (
-      <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
-    ) : (
-      <ul className="space-y-3">
-        {matches.map((m, i) => (
-          <li key={m.id || i} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-            {/* Generic PFP on the left */}
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-300 text-gray-700 font-semibold">
-              U
-            </div>
-
-            <div className="flex-1">
-              <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
-
+        <div>
+          <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
+          <div className="bg-white rounded shadow px-3 py-2">
+            {matches.length === 0 ? (
+              <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
+            ) : (
+              <ul>
+                {matches.map((m, i) => (
+                  <li key={m.id || i}>
+                    <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </main>
       <Footer />
     </div>

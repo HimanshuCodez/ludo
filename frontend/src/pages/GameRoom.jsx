@@ -303,6 +303,15 @@ export function GameRoom() {
         lastGameCancelReason: reason,
         lastGameAt: new Date().toISOString(),
       });
+
+      // Update match status in 'matches' collection
+      const matchRef = doc(db, 'matches', roomId);
+      await updateDoc(matchRef, {
+        status: 'canceled',
+        canceledBy: user.uid,
+        canceledAt: new Date().toISOString(),
+      });
+
       setGameResult('CANCEL');
       setShowSuccess(true);
       setShowCancelOptions(false);
