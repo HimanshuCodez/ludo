@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Prompt, useHistory } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
@@ -33,6 +33,9 @@ export function GameRoom() {
   const [showCancelOptions, setShowCancelOptions] = useState(false);
   const [showResultBox, setShowResultBox] = useState(true);
   const [timeLeft, setTimeLeft] = useState(20 * 60);
+  const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState(false);
+  const [nextLocation, setNextLocation] = useState(null);
+  const history = useHistory();
 
 
   useEffect(() => {
@@ -304,6 +307,57 @@ export function GameRoom() {
     setShowCancelOptions(false);
   };
 
+  const handlePromptMessage = (location) => {
+    if (gameStarted && !showSuccess) {
+      setShowLeaveConfirmationModal(true);
+      setNextLocation(location);
+      return false;
+    }
+    return true;
+  };
+
+  const handleConfirmLeaveGame = async () => {
+    await handleCancelReasonSubmit('Left Game');
+    setShowLeaveConfirmationModal(false);
+    if (nextLocation) {
+      history.push(nextLocation.pathname);
+    }
+  };
+
+  const handleStayOnPage = () => {
+    setShowLeaveConfirmationModal(false);
+    setNextLocation(null);
+  };
+
+  const renderLeaveConfirmationModal = () => {
+    if (!showLeaveConfirmationModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Leave Game?</h3>
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to leave the game? Your progress will be lost and it will be recorded as a cancellation.
+          </p>
+          <div className="flex justify-around gap-4">
+            <button
+              onClick={handleConfirmLeaveGame}
+              className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
+            >
+              Leave Game
+            </button>
+            <button
+              onClick={handleStayOnPage}
+              className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500 transition-colors"
+            >
+              Stay
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
 
   const myPlayer = players.find((p) => p.id === myPlayerId);
   const opponentPlayer = players.find((p) => p.id !== myPlayerId);
@@ -406,6 +460,8 @@ export function GameRoom() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
       <Header />
+      <Prompt when={gameStarted && !showSuccess} message={handlePromptMessage} />
+      {renderLeaveConfirmationModal()}
       <main className="flex-grow w-full flex flex-col items-center py-4 px-1 sm:px-3">
         <div className="w-full max-w-md md:max-w-2xl bg-white rounded-xl shadow-md md:shadow-lg md:my-8 md:px-8 py-6 px-2">
           <div className="flex items-center justify-between w-full p-3 rounded-2xl shadow bg-gradient-to-tr from-blue-100 via-white to-blue-50 mt-0 md:mt-2 gap-3">
