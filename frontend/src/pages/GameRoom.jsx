@@ -274,9 +274,17 @@ export function GameRoom() {
         lastGameResult: 'I WON',
         lastGameAt: new Date().toISOString(),
       });
+
+      const matchRef = doc(db, 'matches', roomId);
+      await updateDoc(matchRef, {
+        status: 'pending_approval',
+        winningPlayerUid: user.uid,
+        winningPlayerProofUrl: downloadURL,
+      });
+
       setUploading(false);
       setShowSuccess(true);
-    } catch (err) { 
+    } catch (err) {
       console.error(err);
       setUploadError('Upload failed. Please try again.');
       setUploading(false);

@@ -26,33 +26,53 @@ const WinApprove = () => {
     return () => unsub();
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     const fetchPendingMatches = async () => {
       setError('');
       setStatusMessage('');
       try {
         const q = query(
-          collection(db, 'users'),
-          where('lastGameProofUrl', '==', 'pending')
+          collection(db, 'matches'), // Query 'matches' collection
+          where('status', '==', 'pending_approval') // Look for matches pending approval
         );
         const querySnapshot = await getDocs(q);
-        const matchesWithUserData = await Promise.all(
+        const matchesData = await Promise.all(
           querySnapshot.docs.map(async (d) => {
             const match = { id: d.id, ...d.data() };
-            const playerUids = Object.keys(match.playerResults);
-            const playersData = {};
-            for (const uid of playerUids) {
-              const userDoc = await getDoc(doc(db, 'users', uid));
+            
+            // Fetch data for winning player (if stored in match)
+            const winningPlayerUid = match.winningPlayerUid;
+            let winningPlayerData = null;
+            if (winningPlayerUid) {
+              const userDoc = await getDoc(doc(db, 'users', winningPlayerUid));
               if (userDoc.exists()) {
-                playersData[uid] = userDoc.data();
+                winningPlayerData = userDoc.data();
               }
             }
-            return { ...match, playersData };
+
+            // Fetch data for other players in the match (if needed for display)
+            // Assuming match document has playerA and playerB UIDs.
+            let playerAData = null;
+            if (match.playerA?.uid) { // Assuming playerA has a uid field
+                const userDoc = await getDoc(doc(db, 'users', match.playerA.uid));
+                if (userDoc.exists()) {
+                    playerAData = userDoc.data();
+                }
+            }
+            let playerBData = null;
+            if (match.playerB?.uid) { // Assuming playerB has a uid field
+                const userDoc = await getDoc(doc(db, 'users', match.playerB.uid));
+                if (userDoc.exists()) {
+                    playerBData = userDoc.data();
+                }
+            }
+
+            return { ...match, winningPlayerData, playerAData, playerBData };
           })
         );
 
-        setPendingMatches(matchesWithUserData);
-        if (matchesWithUserData.length === 0) {
+        setPendingMatches(matchesData);
+        if (matchesData.length === 0) {
           setError('No matches are currently pending approval.');
         }
       } catch (err) {
@@ -64,7 +84,7 @@ const WinApprove = () => {
     fetchPendingMatches();
   }, []);
 
-  const handleApproval = async (match, winningPlayer, status) => {
+  const handleApproval = async (match, winningPlayerUid, status) => { // winningPlayerUid is now just the UID
     if (!adminUid) {
       setError('Admin not authenticated.');
       return;
@@ -73,7 +93,7 @@ const WinApprove = () => {
     try {
       await runTransaction(db, async (transaction) => {
         const matchRef = doc(db, 'matches', match.id);
-        const winnerRef = doc(db, 'users', winningPlayer.uid);
+        const winnerRef = doc(db, 'users', winningPlayerUid); // Use winningPlayerUid directly
 
         const winnerDoc = await transaction.get(winnerRef);
         if (!winnerDoc.exists()) {
@@ -87,7 +107,7 @@ const WinApprove = () => {
         }
 
         transaction.update(matchRef, {
-          status: status,
+          status: status, // 'Approved' or 'Rejected'
           winReviewedBy: adminUid,
           winReviewedAt: new Date().toISOString(),
         });
@@ -118,39 +138,36 @@ const WinApprove = () => {
             <div key={match.id} className="bg-gray-100 p-4 rounded-lg shadow">
               <p><strong>Match ID:</strong> {match.id}</p>
               <p><strong>Amount:</strong> ₹{match.amount}</p>
-              <p><strong>Players:</strong> {match.playerA.name} vs {match.playerB.name}</p>
+              {/* Display player names using playerAData and playerBData */}
+              <p><strong>Players:</strong> {match.playerAData?.name || 'N/A'} vs {match.playerBData?.name || 'N/A'}</p>
 
-              {Object.entries(match.playerResults).map(([uid, result]) => {
-                const playerData = match.playersData?.[uid];
-                if (!playerData) return null; // Don't render if player data hasn't loaded
-
-                return (
-                  <div key={uid} className="mt-2 border-t pt-2">
-                    <p><strong>Winner Claim:</strong> {playerData.name} ({result.result})</p>
-                    {playerData.lastGameProofUrl ? (
-                      <p>
-                        <strong>Proof:</strong> <a href={playerData.lastGameProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a>
-                      </p>
-                    ) : (
-                      <p><strong>Proof:</strong> No proof uploaded.</p>
-                    )}
-                    <div className="flex space-x-4 mt-2">
-                      <button
-                        onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Approved')}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleApproval(match, match.playerA.id === uid ? match.playerA : match.playerB, 'Rejected')}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-                      >
-                        Reject
-                      </button>
-                    </div>
+              {/* Display winning player's claim and proof */}
+              {match.winningPlayerData && (
+                <div className="mt-2 border-t pt-2">
+                  <p><strong>Winner Claim:</strong> {match.winningPlayerData.name} (claimed win)</p>
+                  {match.winningPlayerProofUrl ? (
+                    <p>
+                      <strong>Proof:</strong> <a href={match.winningPlayerProofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">View Screenshot</a>
+                    </p>
+                  ) : (
+                    <p><strong>Proof:</strong> No proof uploaded.</p>
+                  )}
+                  <div className="flex space-x-4 mt-2">
+                    <button
+                      onClick={() => handleApproval(match, match.winningPlayerUid, 'Approved')}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleApproval(match, match.winningPlayerUid, 'Rejected')}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                    >
+                      Reject
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
           ))}
         </div>
