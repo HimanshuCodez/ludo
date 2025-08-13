@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Prompt, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
@@ -36,6 +36,17 @@ export function GameRoom() {
   const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
   const navigate = useNavigate();
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => {
+      if (gameStarted && !showSuccess) {
+        setShowLeaveConfirmationModal(true);
+        setNextLocation(nextLocation);
+        return true; // Block navigation
+      }
+      return false; // Allow navigation
+    }
+  );
 
 
   useEffect(() => {
@@ -307,25 +318,21 @@ export function GameRoom() {
     setShowCancelOptions(false);
   };
 
-  const handlePromptMessage = (location) => {
-    if (gameStarted && !showSuccess) {
-      setShowLeaveConfirmationModal(true);
-      setNextLocation(location);
-      return false;
-    }
-    return true;
-  };
-
   const handleConfirmLeaveGame = async () => {
     await handleCancelReasonSubmit('Left Game');
     setShowLeaveConfirmationModal(false);
-    if (nextLocation) {
+    if (blocker) {
+      blocker.proceed(); // Proceed with the blocked navigation
+    } else if (nextLocation) { // Fallback, though blocker.proceed() should handle it
       navigate(nextLocation.pathname);
     }
   };
 
   const handleStayOnPage = () => {
     setShowLeaveConfirmationModal(false);
+    if (blocker) {
+      blocker.reset(); // Reset the navigation attempt
+    }
     setNextLocation(null);
   };
 
@@ -460,7 +467,6 @@ export function GameRoom() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
       <Header />
-      <Prompt when={gameStarted && !showSuccess} message={handlePromptMessage} />
       {renderLeaveConfirmationModal()}
       <main className="flex-grow w-full flex flex-col items-center py-4 px-1 sm:px-3">
         <div className="w-full max-w-md md:max-w-2xl bg-white rounded-xl shadow-md md:shadow-lg md:my-8 md:px-8 py-6 px-2">
