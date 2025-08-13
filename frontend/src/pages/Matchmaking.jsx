@@ -228,22 +228,37 @@ export function Matchmaking() {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
-          <div className="bg-white rounded shadow px-3 py-2">
-            {matches.length === 0 ? (
-              <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
-            ) : (
-              <ul>
-                {matches.map((m, i) => (
-                  <li key={m.id || i}>
-                    <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+       <div>
+  <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
+  <div className="bg-white rounded shadow px-3 py-2">
+    {matches.length === 0 ? (
+      <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
+    ) : (
+      <ul className="space-y-3">
+        {matches.map((m, i) => (
+          <li key={m.id || i} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+            {/* Fake user profile image */}
+            <img
+              src={`https://i.pravatar.cc/40?img=${(i % 70) + 1}`}
+              alt="User"
+              className="w-10 h-10 rounded-full object-cover"
+            />
+
+            {/* Match info */}
+            <div className="flex-1">
+              <VSRow
+                playerA={m.playerA}
+                playerB={m.playerB}
+                amount={m.amount}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
+
       </main>
       <Footer />
     </div>

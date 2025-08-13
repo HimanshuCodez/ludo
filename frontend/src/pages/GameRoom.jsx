@@ -39,7 +39,7 @@ export function GameRoom() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => {
-      if (gameStarted && !showSuccess) {
+      if (myPlayerId !== null && !showSuccess) {
         setShowLeaveConfirmationModal(true);
         setNextLocation(nextLocation);
         return true; // Block navigation
@@ -102,6 +102,7 @@ export function GameRoom() {
 
     socket.on("userProvidedRoomCode", (code) => {
       console.log(`[Client] Received userProvidedRoomCode: ${code}`);
+      setGeneratedRoomCode(code); // Add this line
       setGameLog((prev) => [...prev, `Opponent sent room code: ${code}`]);
     });
 
@@ -177,19 +178,19 @@ export function GameRoom() {
       console.log('BeforeUnload event prevented!'); // Log when prompt is triggered
     };
 
-    if (gameStarted && !showSuccess) {
+    if (myPlayerId !== null && !showSuccess) {
       window.addEventListener('beforeunload', handleBeforeUnload);
-      console.log('BeforeUnload listener ADDED. gameStarted:', gameStarted, 'showSuccess:', showSuccess);
+      console.log('BeforeUnload listener ADDED. myPlayerId:', myPlayerId, 'showSuccess:', showSuccess);
     } else {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      console.log('BeforeUnload listener REMOVED. gameStarted:', gameStarted, 'showSuccess:', showSuccess);
+      console.log('BeforeUnload listener REMOVED. myPlayerId:', myPlayerId, 'showSuccess:', showSuccess);
     }
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       console.log('BeforeUnload cleanup: listener removed on unmount.');
     };
-  }, [gameStarted, showSuccess]);
+  }, [myPlayerId, showSuccess]);
 
   const redirectToLudoKing = (roomCode) => {
     if (!roomCode) return;
