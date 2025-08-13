@@ -146,14 +146,34 @@ export function Matchmaking() {
     }
   };
 
-  const VSRow = ({ playerA, playerB, amount }) => (
-    <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
+ const VSRow = ({ playerA, playerB, amount }) => (
+  <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
+    {/* Player A */}
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-sm">
+        U
+      </div>
       <span className="font-bold text-gray-700">{playerA.name}</span>
-      <span className="text-xl font-extrabold text-red-500">VS</span>
-      <span className="font-bold text-gray-700">{playerB.name}</span>
-      <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
     </div>
-  );
+
+    {/* VS */}
+    <span className="text-lg font-extrabold text-red-500 leading-none">
+      VS
+    </span>
+
+    {/* Player B */}
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-sm">
+        U
+      </div>
+      <span className="font-bold text-gray-700">{playerB.name}</span>
+    </div>
+
+    {/* Amount */}
+    <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
+  </div>
+);
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -237,20 +257,13 @@ export function Matchmaking() {
       <ul className="space-y-3">
         {matches.map((m, i) => (
           <li key={m.id || i} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-            {/* Fake user profile image */}
-            <img
-              src={`https://i.pravatar.cc/40?img=${(i % 70) + 1}`}
-              alt="User"
-              className="w-10 h-10 rounded-full object-cover"
-            />
+            {/* Generic PFP on the left */}
+            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-300 text-gray-700 font-semibold">
+              U
+            </div>
 
-            {/* Match info */}
             <div className="flex-1">
-              <VSRow
-                playerA={m.playerA}
-                playerB={m.playerB}
-                amount={m.amount}
-              />
+              <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
             </div>
           </li>
         ))}
