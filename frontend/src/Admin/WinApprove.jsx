@@ -102,8 +102,8 @@ const WinApprove = () => {
 
         if (status === 'Approved') {
           const prizeMoney = match.amount * 1.9;
-          const newBalance = (winnerDoc.data().depositChips || 0) + prizeMoney;
-          transaction.update(winnerRef, { depositChips: newBalance });
+          const newBalance = (winnerDoc.data().winningChips || 0) + prizeMoney;
+          transaction.update(winnerRef, { winningChips: newBalance });
         }
 
         transaction.update(matchRef, {

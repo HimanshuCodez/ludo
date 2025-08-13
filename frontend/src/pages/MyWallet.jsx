@@ -14,6 +14,7 @@ export function MyWallet() {
   const auth = getAuth();
   const user = auth.currentUser;
   const [depositChips, setDepositChips] = useState(0);
+  const [winningChips, setWinningChips] = useState(0);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -22,6 +23,7 @@ export function MyWallet() {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           setDepositChips(parseFloat(userSnap.data().depositChips) || 0);
+          setWinningChips(parseFloat(userSnap.data().winningChips) || 0);
         }
       }
     };
@@ -96,7 +98,7 @@ export function MyWallet() {
               <img src={rupeeLogo} alt="" className="w-6 h-6 mx-auto" />
               <div className="flex justify-center items-center gap-1 text-xl font-bold">
                 <img src={rupee2Logo} alt="" className="w-4 h-4" />
-                <span>0</span>
+                <span>{winningChips.toFixed(2)}</span>
               </div>
               <div className="text-gray-600 text-sm">Money</div>
             </div>
