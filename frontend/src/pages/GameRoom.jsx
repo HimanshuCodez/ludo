@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Prompt, useHistory } from "react-router-dom";
+import { useParams, Prompt, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
@@ -35,7 +35,7 @@ export function GameRoom() {
   const [timeLeft, setTimeLeft] = useState(20 * 60);
   const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
-  const history = useHistory();
+  const navigate = useNavigate();
 
 
   useEffect(() => {
@@ -320,7 +320,7 @@ export function GameRoom() {
     await handleCancelReasonSubmit('Left Game');
     setShowLeaveConfirmationModal(false);
     if (nextLocation) {
-      history.push(nextLocation.pathname);
+      navigate(nextLocation.pathname);
     }
   };
 
