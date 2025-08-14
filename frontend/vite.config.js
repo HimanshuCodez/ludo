@@ -3,15 +3,18 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: 
-  [
+  plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'robots.txt', 'icons/icon-192x192.png', 'icons/icon-512x512.png'],
+      includeAssets: [
+        'favicon.svg',
+        'robots.txt',
+        'icons/icon-192x192.png',
+        'icons/icon-512x512.png'
+      ],
       manifest: {
         name: 'Your App Name',
         short_name: 'App',
@@ -31,7 +34,12 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        cleanupOutdatedCaches: true, // removes old cache
+        clientsClaim: true,          // SW takes control immediately
+        skipWaiting: true            // skip waiting phase
       }
     })
-  ],
+  ]
 })
