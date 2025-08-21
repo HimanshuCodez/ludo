@@ -6,6 +6,8 @@ import { Header } from "../Components/Header";
 import { getAuth } from 'firebase/auth';
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { motion, AnimatePresence } from "framer-motion";
+import { User } from "lucide-react";
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -25,20 +27,20 @@ export function Matchmaking() {
     const fetchUserData = async () => {
       if (user) {
         try {
-          const userRef = doc(db, 'users', user.uid);
+          const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setBalance(parseFloat(userData.depositChips) || 0);
-            setUserName(userData.name || 'Anonymous');
+            setUserName(userData.name || "Anonymous");
           } else {
             setBalance(0);
-            setUserName('Anonymous');
+            setUserName("Anonymous");
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error("Error fetching user data:", error);
           setBalance(0);
-          setUserName('Anonymous');
+          setUserName("Anonymous");
         }
       }
     };
@@ -82,7 +84,9 @@ export function Matchmaking() {
     });
 
     socket.on("disconnect", () => {
-      setError("You are disconnected. Please check your internet connection. Ad-blockers can sometimes interfere with the connection.");
+      setError(
+        "You are disconnected. Please check your internet connection. Ad-blockers can sometimes interfere with the connection."
+      );
     });
 
     return () => {
@@ -92,8 +96,8 @@ export function Matchmaking() {
 
   const handleSet = () => {
     if (!user) {
-        setError("You must be logged in to create a challenge.");
-        return;
+      setError("You must be logged in to create a challenge.");
+      return;
     }
     const challengeAmount = parseInt(amount);
     if (challengeAmount > 0) {
@@ -104,16 +108,22 @@ export function Matchmaking() {
       if (balance >= challengeAmount) {
         setLoading(true);
         setError("");
-        socketRef.current.emit("challenge:create", { 
-          amount, 
-          uid: user.uid,
-          name: userName
-        }, (success) => {
-          setLoading(false);
-          if (!success) {
-            setError("Failed to create challenge. The server might be busy or an error occurred.");
+        socketRef.current.emit(
+          "challenge:create",
+          {
+            amount,
+            uid: user.uid,
+            name: userName,
+          },
+          (success) => {
+            setLoading(false);
+            if (!success) {
+              setError(
+                "Failed to create challenge. The server might be busy or an error occurred."
+              );
+            }
           }
-        });
+        );
       } else {
         setError("Insufficient balance to create this challenge.");
       }
@@ -124,35 +134,54 @@ export function Matchmaking() {
 
   const handlePlay = (challengeId) => {
     if (!user) {
-        setError("You must be logged in to accept a challenge.");
-        return;
+      setError("You must be logged in to accept a challenge.");
+      return;
     }
     const challenge = challenges.find((ch) => ch.id === challengeId);
     if (challenge && balance >= challenge.amount) {
       setLoading(true);
       setError("");
-      socketRef.current.emit("challenge:accept", { 
-        challengeId, 
-        uid: user.uid,
-        name: userName
-      }, (success) => {
-        setLoading(false);
-        if (!success) {
-          setError("Failed to accept challenge. The server might be busy or an error occurred.");
+      socketRef.current.emit(
+        "challenge:accept",
+        {
+          challengeId,
+          uid: user.uid,
+          name: userName,
+        },
+        (success) => {
+          setLoading(false);
+          if (!success) {
+            setError(
+              "Failed to accept challenge. The server might be busy or an error occurred."
+            );
+          }
         }
-      });
+      );
     } else {
       setError("Insufficient balance to accept this challenge.");
     }
   };
 
+  // Eye-catchy VS row with avatars + animation
   const VSRow = ({ playerA, playerB, amount }) => (
-    <div className="flex items-center justify-between px-5 py-2 my-1 bg-blue-50 rounded-xl shadow">
-      <span className="font-bold text-gray-700">{playerA.name}</span>
-      <span className="text-xl font-extrabold text-red-500">VS</span>
-      <span className="font-bold text-gray-700">{playerB.name}</span>
+    <motion.div
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 50 }}
+      transition={{ duration: 0.4 }}
+      className="flex items-center justify-between px-5 py-3 my-2 rounded-xl shadow-lg bg-gradient-to-r from-blue-100 to-purple-100 hover:scale-[1.02] transition-transform"
+    >
+      <div className="flex items-center gap-2">
+        <User className="w-6 h-6 text-blue-600" />
+        <span className="font-bold text-gray-800">{playerA.name}</span>
+      </div>
+      <span className="text-2xl font-extrabold text-red-500 animate-pulse">VS</span>
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-gray-800">{playerB.name}</span>
+        <User className="w-6 h-6 text-purple-600" />
+      </div>
       <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
-    </div>
+    </motion.div>
   );
 
   return (
@@ -161,8 +190,14 @@ export function Matchmaking() {
       <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
           <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
-          <div className="text-gray-700 mb-3">Your Balance: ₹{balance.toFixed(2)}</div>
-          {error && <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>}
+          <div className="text-gray-700 mb-3">
+            Your Balance: ₹{balance.toFixed(2)}
+          </div>
+          {error && (
+            <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">
+              {error}
+            </div>
+          )}
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {
@@ -179,15 +214,19 @@ export function Matchmaking() {
               className="h-12 w-36 rounded-l px-3 border border-gray-300 focus:outline-none text-lg"
               disabled={loading || myChallengeId !== null}
             />
-            <button
+            <motion.button
               type="submit"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               className={`h-12 px-8 rounded-r text-white font-bold text-lg ${
-                loading || myChallengeId ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-800"
+                loading || myChallengeId
+                  ? "bg-gray-400"
+                  : "bg-blue-600 hover:bg-blue-800"
               }`}
               disabled={loading || myChallengeId}
             >
               Set
-            </button>
+            </motion.button>
           </form>
           {myChallengeId && (
             <div className="mt-3 text-blue-600 text-center animate-pulse">
@@ -199,49 +238,83 @@ export function Matchmaking() {
         <div className="mb-7">
           <h2 className="text-xl font-bold text-center mb-3">Challenges</h2>
           <div className="bg-white rounded shadow px-3 pt-1 pb-2">
-            {challenges.length === 0 && (
-              <div className="text-gray-400 py-3 text-center">No open challenges...</div>
-            )}
-            <ul>
-              {challenges.map((ch) => (
-                <li
-                  key={ch.id}
-                  className={`flex items-center justify-between border-b last:border-b-0 py-2 ${
-                    ch.own ? "bg-blue-50" : ""
-                  }`}
-                >
-                  <span className="font-semibold">{ch.name}</span>
-                  <span className="text-green-700 font-bold">₹{ch.amount}</span>
-                  {!ch.own && (
-                    <button
-                      className="ml-3 px-4 py-1 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
-                      onClick={() => handlePlay(ch.id)}
-                      disabled={loading}
+            <AnimatePresence>
+              {challenges.length === 0 ? (
+                <div className="text-gray-400 py-3 text-center">
+                  No open challenges...
+                </div>
+              ) : (
+                <ul>
+                  {challenges.map((ch) => (
+                    <motion.li
+                      key={ch.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className={`flex items-center justify-between border-b last:border-b-0 py-2 ${
+                        ch.own ? "bg-blue-50" : ""
+                      }`}
                     >
-                      Play
-                    </button>
-                  )}
-                  {ch.own && <span className="ml-3 text-xs text-gray-500">(waiting)</span>}
-                </li>
-              ))}
-            </ul>
+                      <div className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-blue-500" />
+                        <span className="font-semibold">{ch.name}</span>
+                      </div>
+                      <span className="text-green-700 font-bold">
+                        ₹{ch.amount}
+                      </span>
+                      {!ch.own && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="ml-3 px-4 py-1 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
+                          onClick={() => handlePlay(ch.id)}
+                          disabled={loading}
+                        >
+                          Play
+                        </motion.button>
+                      )}
+                      {ch.own && (
+                        <span className="ml-3 text-xs text-gray-500">
+                          (waiting)
+                        </span>
+                      )}
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         <div>
           <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
           <div className="bg-white rounded shadow px-3 py-2">
-            {matches.length === 0 ? (
-              <div className="text-gray-400 py-2 text-center">No ongoing matches...</div>
-            ) : (
-              <ul>
-                {matches.map((m, i) => (
-                  <li key={m.id || i}>
-                    <VSRow playerA={m.playerA} playerB={m.playerB} amount={m.amount} />
-                  </li>
-                ))}
-              </ul>
-            )}
+            <AnimatePresence>
+              {matches.length === 0 ? (
+                <div className="text-gray-400 py-2 text-center">
+                  No ongoing matches...
+                </div>
+              ) : (
+                <ul>
+                  {matches.map((m, i) => (
+                    <motion.li
+                      key={m.id || i}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <VSRow
+                        playerA={m.playerA}
+                        playerB={m.playerB}
+                        amount={m.amount}
+                      />
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </main>
