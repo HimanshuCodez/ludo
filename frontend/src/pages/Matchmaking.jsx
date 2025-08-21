@@ -3,11 +3,11 @@ import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "../Components/Footer";
 import { Header } from "../Components/Header";
-import { getAuth } from 'firebase/auth';
+import { getAuth } from "firebase/auth";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
-import { User } from "lucide-react";
+import { SplinePointer, TrophyIcon, User } from "lucide-react";
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -83,11 +83,7 @@ export function Matchmaking() {
       setLoading(false);
     });
 
-    socket.on("disconnect", () => {
-      setError(
-        "You are disconnected. Please check your internet connection. Ad-blockers can sometimes interfere with the connection."
-      );
-    });
+    socket.on("disconnect", () => {});
 
     return () => {
       socket.disconnect();
@@ -162,25 +158,36 @@ export function Matchmaking() {
     }
   };
 
-  // Eye-catchy VS row with avatars + animation
+  // Eye-catchy VS row with avatars + always centered VS
   const VSRow = ({ playerA, playerB, amount }) => (
     <motion.div
       initial={{ opacity: 0, x: -50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4 }}
-      className="flex items-center justify-between px-5 py-3 my-2 rounded-xl shadow-lg bg-gradient-to-r from-blue-100 to-purple-100 hover:scale-[1.02] transition-transform"
+      className="grid  border-2 grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-1 my-2 rounded-xl shadow-lg bg-gradient-to-r from-blue-100 to-purple-100 hover:scale-[1.02] transition-transform"
     >
-      <div className="flex items-center gap-2">
+      {/* Left Player */}
+      <div className="flex items-center gap-2 justify-start">
         <User className="w-6 h-6 text-blue-600" />
-        <span className="font-bold text-gray-800">{playerA.name}</span>
+        <span className="font-bold text-gray-800 truncate">{playerA.name}</span>
       </div>
-      <span className="text-2xl font-extrabold text-red-500 animate-pulse">VS</span>
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-gray-800">{playerB.name}</span>
+
+      {/* VS Centered */}
+      <span className="text-2xl font-extrabold text-red-500 animate-pulse text-center">
+        VS
+      </span>
+
+      {/* Right Player */}
+      <div className="flex items-center gap-2 justify-end">
+        <span className="font-bold text-gray-800 truncate">{playerB.name}</span>
         <User className="w-6 h-6 text-purple-600" />
       </div>
-      <span className="ml-3 text-green-700 font-bold">₹{amount}</span>
+
+      {/* Amount */}
+      <span className="col-span-3 text-center mt-2  text-green-700 font-bold">
+        Rs {amount}
+      </span>
     </motion.div>
   );
 
@@ -188,6 +195,7 @@ export function Matchmaking() {
     <div className="flex flex-col min-h-screen bg-gray-100">
       <Header />
       <main className="flex-grow container mx-auto max-w-xl px-2 py-6">
+        {/* Balance Section */}
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
           <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
           <div className="text-gray-700 mb-3">
@@ -229,14 +237,24 @@ export function Matchmaking() {
             </motion.button>
           </form>
           {myChallengeId && (
-            <div className="mt-3 text-blue-600 text-center animate-pulse">
-              Waiting for opponent to click Play...
+            <div className="mt-4 flex flex-col items-center justify-center text-blue-600">
+             
+
+              {/* Eye-catching waiting text */}
+              <p className="text-lg font-bold animate-pulse">
+                ⏳ Waiting for a player to join your challenge...
+              </p>
             </div>
           )}
         </div>
 
+        {/* Challenges */}
         <div className="mb-7">
-          <h2 className="text-xl font-bold text-center mb-3">Challenges</h2>
+        <h2 className="flex items-center justify-center gap-2 text-xl font-bold text-center mb-3">
+ -------<TrophyIcon className="w-6 h-6 text-black-500" />
+  <span>Open Challenges------</span>
+</h2>
+
           <div className="bg-white rounded shadow px-3 pt-1 pb-2">
             <AnimatePresence>
               {challenges.length === 0 ? (
@@ -252,16 +270,34 @@ export function Matchmaking() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
-                      className={`flex items-center justify-between border-b last:border-b-0 py-2 ${
-                        ch.own ? "bg-blue-50" : ""
+                      className={`flex items-center justify-between border-b last:border-b-0 py-2 px-2 rounded-md ${
+                        ch.own
+                          ? "bg-blue-50 ring-2 ring-blue-400 animate-pulse"
+                          : ""
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <User className="w-5 h-5 text-blue-500" />
                         <span className="font-semibold">{ch.name}</span>
                       </div>
+                      <svg
+  className="animate-spin h-8 w-8 text-black"
+  xmlns="http://www.w3.org/2000/svg"
+  fill="currentColor"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M12 2a10 10 0 100 20 10 10 0 100-20zm0 4a6 6 0 110 12A6 6 0 0112 6z"
+    className="opacity-25"
+  />
+  <path
+    d="M12 2a10 10 0 0110 10h-4a6 6 0 00-6-6V2z"
+    className="opacity-75"
+  />
+</svg>
+
                       <span className="text-green-700 font-bold">
-                        ₹{ch.amount}
+                        Rs {ch.amount}
                       </span>
                       {!ch.own && (
                         <motion.button
@@ -287,8 +323,11 @@ export function Matchmaking() {
           </div>
         </div>
 
+        {/* Ongoing Matches */}
         <div>
-          <h2 className="text-xl font-bold text-center mb-3">Ongoing Matches</h2>
+          <h2 className="text-xl font-bold text-center mb-3">
+            Ongoing Matches
+          </h2>
           <div className="bg-white rounded shadow px-3 py-2">
             <AnimatePresence>
               {matches.length === 0 ? (
