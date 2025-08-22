@@ -1,6 +1,7 @@
 import { collection, getDocs, doc, updateDoc, getDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebase'; // Adjust path to your firebase config
 import React, { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'; // Import toast
 import { 
   Check, 
   X, 
@@ -71,13 +72,13 @@ const TopUpConfirm = () => {
         adminComment: comment,
       });
 
-      alert(`Request ${request.id} approved!`)
+      toast.success(`Request ${request.id} approved!`);
       setComment('')
       setSelectedRequest(null)
       setTopUpRequests(topUpRequests.filter(r => r.id !== request.id));
     } catch (error) {
       console.error("Error approving request: ", error);
-      alert("Failed to approve request.")
+      toast.error("Failed to approve request.");
     }
   }
 
@@ -89,13 +90,13 @@ const TopUpConfirm = () => {
         adminComment: comment,
       });
 
-      alert(`Request ${requestId} rejected!`)
+      toast.success(`Request ${requestId} rejected!`);
       setComment('')
       setSelectedRequest(null)
       setTopUpRequests(topUpRequests.filter(r => r.id !== requestId));
     } catch (error) {
       console.error("Error rejecting request: ", error);
-      alert("Failed to reject request.")
+      toast.error("Failed to reject request.");
     }
   }
 

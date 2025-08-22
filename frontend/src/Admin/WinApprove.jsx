@@ -11,12 +11,11 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { toast } from 'react-toastify'; // Import toast
 
 const WinApprove = () => {
   const [pendingMatches, setPendingMatches] = useState([]);
-  const [statusMessage, setStatusMessage] = useState('');
   const [adminUid, setAdminUid] = useState(null);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -28,8 +27,6 @@ const WinApprove = () => {
 
     useEffect(() => {
     const fetchPendingMatches = async () => {
-      setError('');
-      setStatusMessage('');
       try {
         const q = query(
           collection(db, 'matches'), // Query 'matches' collection
@@ -73,11 +70,11 @@ const WinApprove = () => {
 
         setPendingMatches(matchesData);
         if (matchesData.length === 0) {
-          setError('No matches are currently pending approval.');
+          toast.info('No matches are currently pending approval.');
         }
       } catch (err) {
         console.error(err);
-        setError('Error fetching pending matches.');
+        toast.error('Error fetching pending matches.');
       }
     };
 
@@ -86,7 +83,7 @@ const WinApprove = () => {
 
   const handleApproval = async (match, winningPlayerUid, status) => { // winningPlayerUid is now just the UID
     if (!adminUid) {
-      setError('Admin not authenticated.');
+      toast.error('Admin not authenticated.');
       return;
     }
 
@@ -113,11 +110,11 @@ const WinApprove = () => {
         });
       });
 
-      setStatusMessage(`Match ${match.id} has been ${status}.`);
+      toast.success(`Match ${match.id} has been ${status}.`);
       setPendingMatches(pendingMatches.filter((m) => m.id !== match.id));
     } catch (err) {
       console.error(err);
-      setError(`Failed to update match status: ${err.message}`);
+      toast.error(`Failed to update match status: ${err.message}`);
     }
   };
 
@@ -125,13 +122,6 @@ const WinApprove = () => {
     <div className="min-h-screen bg-gray-50 p-6 flex items-start justify-center">
       <div className="w-full max-w-4xl bg-white rounded-xl shadow-md p-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">Win Approval</h2>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>
-        )}
-        {statusMessage && (
-          <div className="bg-green-100 text-green-700 px-3 py-2 rounded mb-4 text-sm">{statusMessage}</div>
-        )}
 
         <div className="space-y-4">
           {pendingMatches.map((match) => (

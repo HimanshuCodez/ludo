@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify'; // Import toast
 
 export function Pay() {
   const [amount] = useState(window.localStorage.getItem('Amount') || 0);
@@ -23,14 +24,14 @@ export function Pay() {
     const initializePayment = async () => {
       // 1. Validate user
       if (!user) {
-        setError('Please log in to proceed with payment.');
+        toast.error('Please log in to proceed with payment.'); // Use toast.error
         setLoading(false);
         return;
       }
 
       // 2. Validate amount
       if (!amount || isNaN(amount) || amount < 10 || amount > 20000) {
-        setError('Invalid amount. Please select an amount between ₹10 and ₹20000.');
+        toast.error('Invalid amount. Please select an amount between ₹10 and ₹20000.'); // Use toast.error
         navigate('/AddCash');
         setLoading(false);
         return;
@@ -45,10 +46,10 @@ export function Pay() {
         if (docSnap.exists()) {
           setBarcodeUrl(docSnap.data().NewBarcode);
         } else {
-          setError('Could not find payment QR code.');
+          toast.error('Could not find payment QR code.'); // Use toast.error
         }
       } catch (err) {
-        setError('Failed to load payment QR code.');
+        toast.error('Failed to load payment QR code.'); // Use toast.error
         console.error(err);
       } finally {
         // 4. Finish loading

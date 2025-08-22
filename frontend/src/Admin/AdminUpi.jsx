@@ -17,6 +17,77 @@ import {
 import { storage, db } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify'; // Import toast
+
+const AdminUpi = () => {
+  const [currentBarcode, setCurrentBarcode] = useState('https://via.placeholder.com/400x200/2563eb/ffffff?text=QR+Code+Sample')
+  const [isEditing, setIsEditing] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [zoom, setZoom] = useState(100)
+  const [rotation, setRotation] = useState(0)
+  const fileInputRef = useRef(null)
+
+  // Mock barcode history data
+
+  const handleDrag = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0]
+      if (file.type.startsWith('image/')) {
+        handleFileUpload(file)
+      }
+    }
+  }
+
+  const handleFileUpload = (file) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setUploadedFile({
+        file: file,
+        preview: e.target.result,
+        name: file.name
+      })
+      setIsEditing(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleFileInputChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0])
+    }
+  }
+
+  const handleSave = async () => {
+    if (!uploadedFile) return;
+
+    const storageRef = ref(storage, `barcodes/${uploadedFile.name}`);
+    await uploadBytes(storageRef, uploadedFile.file);
+    const downloadURL = await getDownloadURL(storageRef);
+
+    const userRef = doc(db, 'users', 'upi_barcode');
+    await setDoc(userRef, { NewBarcode: downloadURL }, { merge: true });
+
+
+    setCurrentBarcode(downloadURL);
+    setIsEditing(false);
+    setUploadedFile(null);
+    toast.success('Barcode updated successfully!'); // Use toast.success
+  };
 
 const AdminUpi = () => {
   const [currentBarcode, setCurrentBarcode] = useState('https://via.placeholder.com/400x200/2563eb/ffffff?text=QR+Code+Sample')
@@ -116,14 +187,6 @@ const AdminUpi = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Barcode Management</h1>
           <p className="text-gray-600">Upload and manage payment QR codes and barcodes</p>
         </div>
-
-        {/* Success Message */}
-        {showSuccess && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center">
-            <Check className="w-5 h-5 text-green-600 mr-3" />
-            <span className="text-green-800 font-medium">Barcode updated successfully!</span>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Current Barcode Display */}

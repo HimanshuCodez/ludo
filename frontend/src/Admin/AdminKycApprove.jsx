@@ -10,11 +10,12 @@ import {
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
+import { onAuthStateChanged } from 'firebase/auth';
+import { toast } from 'react-toastify'; // Import toast
+
 const AdminKycApprove = () => {
   const [userDoc, setUserDoc] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('');
   const [adminUid, setAdminUid] = useState(null);
-  const [error, setError] = useState('');
 
   // Track current logged-in admin
   useEffect(() => {
@@ -27,8 +28,6 @@ const AdminKycApprove = () => {
   // Fetch one user with Pending KYC
   useEffect(() => {
     const fetchPendingKyc = async () => {
-      setError('');
-      setStatusMessage('');
       try {
         const q = query(
           collection(db, 'users'),
@@ -40,11 +39,11 @@ const AdminKycApprove = () => {
           const docSnap = snapshot.docs[0];
           setUserDoc({ id: docSnap.id, ...docSnap.data() });
         } else {
-          setError('No users found with pending KYC.');
+          toast.info('No users found with pending KYC.');
         }
       } catch (err) {
         console.error(err);
-        setError('Error fetching user.');
+        toast.error('Error fetching user.');
       }
     };
 
@@ -60,10 +59,10 @@ const AdminKycApprove = () => {
         kycReviewedBy: adminUid,
       });
       setUserDoc({ ...userDoc, kycStatus: status });
-      setStatusMessage(`KYC marked as "${status}"`);
+      toast.success(`KYC marked as "${status}"`);
     } catch (err) {
       console.error(err);
-      setError('Failed to update status.');
+      toast.error('Failed to update status.');
     }
   };
 
@@ -71,12 +70,6 @@ const AdminKycApprove = () => {
     <div className="min-h-screen bg-gray-100 p-6 flex items-start justify-center">
       <div className="w-full max-w-xl bg-white rounded-xl shadow-lg p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">KYC Review Panel</h2>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
 
         {userDoc && (
           <div>

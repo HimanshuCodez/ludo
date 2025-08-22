@@ -8,6 +8,7 @@ import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { SplinePointer, TrophyIcon, User } from "lucide-react";
+import { toast } from 'react-toastify'; // Import toast
 
 export function Matchmaking() {
   const [amount, setAmount] = useState("");
@@ -79,7 +80,7 @@ export function Matchmaking() {
 
     socket.on("error", ({ message }) => {
       console.error(`[Client] Error: ${message}`);
-      setError(message);
+      toast.error(message);
       setLoading(false);
     });
 
@@ -92,13 +93,13 @@ export function Matchmaking() {
 
   const handleSet = () => {
     if (!user) {
-      setError("You must be logged in to create a challenge.");
+      toast.error("You must be logged in to create a challenge.");
       return;
     }
     const challengeAmount = parseInt(amount);
     if (challengeAmount > 0) {
       if (challengeAmount % 50 !== 0) {
-        setError("Amount must be in multiples of 50.");
+        toast.error("Amount must be in multiples of 50.");
         return;
       }
       if (balance >= challengeAmount) {
@@ -114,23 +115,23 @@ export function Matchmaking() {
           (success) => {
             setLoading(false);
             if (!success) {
-              setError(
+              toast.error(
                 "Failed to create challenge. The server might be busy or an error occurred."
               );
             }
           }
         );
       } else {
-        setError("Insufficient balance to create this challenge.");
+        toast.error("Insufficient balance to create this challenge.");
       }
     } else {
-      setError("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.");
     }
   };
 
   const handlePlay = (challengeId) => {
     if (!user) {
-      setError("You must be logged in to accept a challenge.");
+      toast.error("You must be logged in to accept a challenge.");
       return;
     }
     const challenge = challenges.find((ch) => ch.id === challengeId);
@@ -147,14 +148,14 @@ export function Matchmaking() {
         (success) => {
           setLoading(false);
           if (!success) {
-            setError(
+            toast.error(
               "Failed to accept challenge. The server might be busy or an error occurred."
             );
           }
         }
       );
     } else {
-      setError("Insufficient balance to accept this challenge.");
+      toast.error("Insufficient balance to accept this challenge.");
     }
   };
 

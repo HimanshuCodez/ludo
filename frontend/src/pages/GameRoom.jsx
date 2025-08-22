@@ -7,6 +7,7 @@ import { getAuth } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { toast } from 'react-toastify'; // Import toast
 
 export function GameRoom() {
   const { roomId } = useParams();
@@ -136,13 +137,13 @@ export function GameRoom() {
           socket.emit("joinRoom", { roomId, userName, uid: user?.uid || '' });
         }, delay);
       } else {
-        alert("Room not found. Please try again or create a new match.");
+        toast.error("Room not found. Please try again or create a new match.");
       }
     });
 
     socket.on("error", ({ message }) => {
       console.log(`[Client] Error: ${message}`);
-      alert(message);
+      toast.error(message);
     });
 
     socket.on("disconnect", () => {
@@ -225,11 +226,11 @@ export function GameRoom() {
   const handleSendRoomCode = () => {
     const trimmedCode = userEnteredRoomCode.trim();
     if (!trimmedCode) {
-      alert("Please enter a room code.");
+      toast.error("Please enter a room code.");
       return;
     }
     if (!/^\d{8}$/.test(trimmedCode)) {
-      alert("Please enter a valid 8-digit Ludo King room code.");
+      toast.error("Please enter a valid 8-digit Ludo King room code.");
       return;
     }
 
@@ -244,7 +245,7 @@ export function GameRoom() {
 
   const handleJoinWithRoomCode = () => {
     if (!generatedRoomCode) {
-      alert("No room code available to join.");
+      toast.error("No room code available to join.");
       return;
     }
     redirectToLudoKing(generatedRoomCode);

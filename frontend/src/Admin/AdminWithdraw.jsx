@@ -10,6 +10,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { toast } from 'react-toastify'; // Import toast
 
 const WithdrawAdmin = () => {
   const [requests, setRequests] = useState([]);
@@ -49,10 +50,14 @@ const WithdrawAdmin = () => {
     } 
     // For rejection, we don't touch the balance, just reset the withdrawal fields.
 
-    await updateDoc(userRef, updateData);
-
-
-    setRequests(prev => prev.filter(user => user.id !== id));
+    try {
+      await updateDoc(userRef, updateData);
+      toast.success(`Withdrawal request ${action === 'approve' ? 'approved' : 'rejected'}.`);
+      setRequests(prev => prev.filter(user => user.id !== id));
+    } catch (error) {
+      console.error("Error updating withdrawal status: ", error);
+      toast.error("Failed to update withdrawal status.");
+    }
   };
 
   return (

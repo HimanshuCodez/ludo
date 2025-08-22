@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { toast } from 'react-toastify'; // Import toast
 
 const Withdraw = () => {
   const [amount, setAmount] = useState('');
@@ -94,26 +95,26 @@ const Withdraw = () => {
 
     const withdrawalAmount = parseFloat(amount);
     if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
-      setError('Please enter a valid amount.');
+      toast.error('Please enter a valid amount.');
       return;
     }
 
     if (withdrawalAmount > userBalance) {
-        setError('Insufficient balance.');
+        toast.error('Insufficient balance.');
         return;
     }
     if (withdrawalAmount < 200) {
-        setError('Balance must be above 200rs.');
+        toast.error('Balance must be above 200rs.');
         return;
     }
 
     if (method === 'upi' && !validateUPI(upiId)) {
-      setError('Please enter a valid UPI ID (e.g., user@bank).');
+      toast.error('Please enter a valid UPI ID (e.g., user@bank).');
       return;
     }
 
     if (method === 'bank' && (!accountNumber || !ifscCode || !bankName)) {
-      setError('Please fill in all bank details.');
+      toast.error('Please fill in all bank details.');
       return;
     }
 
@@ -121,7 +122,7 @@ const Withdraw = () => {
 
     const user = auth.currentUser;
     if (!user) {
-      setError('User not logged in.');
+      toast.error('User not logged in.');
       setLoading(false);
       return;
     }
@@ -145,7 +146,7 @@ const Withdraw = () => {
       localStorage.setItem('withdrawalTimestamp', timestamp.toString());
       setOnCooldown(true);
 
-      setMessage('✅ Withdrawal request submitted successfully!');
+      toast.success('✅ Withdrawal request submitted successfully!');
       setAmount('');
       setUpiId('');
       setAccountNumber('');
@@ -153,7 +154,7 @@ const Withdraw = () => {
       setBankName('');
     } catch (err) {
       console.error(err);
-      setError('❌ Something went wrong. Please try again.');
+      toast.error('❌ Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
