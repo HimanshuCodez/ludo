@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
+import 'react-toastify/dist/ReactToastify.css'; // Import Toastify CSS
+import { ToastContainer } from 'react-toastify'; // Import ToastContainer
 // import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -38,7 +40,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/home',
-    element: <PrivateRoute><Home /></PrivateRoute>,
+    element: <Home />,
   },
   {
     path: '/Profile',
@@ -126,6 +128,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   // <React.StrictMode>
      <AuthProvider>
       <RouterProvider router={router} />
+      <ToastContainer /> {/* Add ToastContainer here */}
     </AuthProvider>
   // </React.StrictMode>
 );

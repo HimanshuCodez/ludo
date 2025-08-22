@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
 import { useState } from 'react';
+import { toast } from 'react-toastify'; // Import toast
 
 export function AddCash() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export function AddCash() {
   const handleNext = () => {
     const parsedAmount = parseInt(amount);
     if (!parsedAmount || parsedAmount <10 || parsedAmount > 1000000) {
-      alert('Please enter an amount between ₹50 and ₹1000000');
+      toast.error('Please enter an amount between ₹50 and ₹1000000'); // Use toast.error
       return;
     }
     window.localStorage.setItem('Amount', parsedAmount);

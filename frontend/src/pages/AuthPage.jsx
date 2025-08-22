@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
+import { toast } from 'react-toastify';
 
 export default function AuthPage() {
   const { user, loading } = useAuth();
@@ -50,7 +51,7 @@ export default function AuthPage() {
     if (confirmationResult) {
       timer = setTimeout(() => {
         setConfirmationResult(null);
-        alert("OTP session expired. Request a new OTP.");
+        toast.error("OTP session expired. Request a new OTP.");
       }, 120000); // 2 minutes timeout
     }
     return () => clearTimeout(timer);
@@ -71,7 +72,7 @@ export default function AuthPage() {
       return;
     }
     if (!phone || phone.length !== 10) {
-      alert("Please enter a valid 10-digit phone number.");
+      toast.error("Please enter a valid 10-digit phone number.");
       return;
     }
 
@@ -92,10 +93,10 @@ export default function AuthPage() {
       if (step === 1) {
         setStep(2);
       }
-      alert("OTP sent");
+      toast.success("OTP sent");
     } catch (error) {
       console.error("OTP Error", error);
-      alert("OTP failed: " + error.message);
+      toast.error("OTP failed: " + error.message);
     } finally {
       setIsSendingOTP(false);
     }
@@ -103,12 +104,12 @@ export default function AuthPage() {
 
  const verifyOTP = async () => {
   if (!confirmationResult) {
-    alert("Please request a new OTP first.");
+    toast.error("Please request a new OTP first.");
     return;
   }
 
   if (!otp || otp.length !== 6 || isNaN(otp)) {
-    alert("Please enter a valid 6-digit OTP");
+    toast.error("Please enter a valid 6-digit OTP");
     return;
   }
 
@@ -141,7 +142,7 @@ export default function AuthPage() {
     }
 
  
-    alert("Phone number verified!");
+    toast.success("Phone number verified!");
     navigate("/home");
 
   } catch (error) {
@@ -150,12 +151,12 @@ export default function AuthPage() {
       error.code === "auth/invalid-verification-code" ||
       error.code === "auth/code-expired"
     ) {
-      alert("Invalid or expired OTP. Please request a new OTP.");
+      toast.error("Invalid or expired OTP. Please request a new OTP.");
       setConfirmationResult(null);
     } else if (error.code === "permission-denied") {
-      alert("Error: Missing or insufficient permissions. Check Firestore rules.");
+      toast.error("Error: Missing or insufficient permissions. Check Firestore rules.");
     } else {
-      alert("Invalid OTP: " + error.message);
+      toast.error("Invalid OTP: " + error.message);
     }
   }
 };

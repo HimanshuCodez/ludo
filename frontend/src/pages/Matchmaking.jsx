@@ -326,7 +326,7 @@ export function Matchmaking() {
         {/* Ongoing Matches */}
         <div>
           <h2 className="text-xl font-bold text-center mb-3">
-            Ongoing Matches
+            -------Ongoing Matches-------
           </h2>
           <div className="bg-white rounded shadow px-3 py-2">
             <AnimatePresence>

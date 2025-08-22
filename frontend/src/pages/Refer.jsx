@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase'; // Adjust path as needed
+import { toast } from 'react-toastify'; // Import toast
 
 export function Refer() {
   const navigate = useNavigate();
@@ -54,12 +55,12 @@ export function Refer() {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralCode);
-    alert('Referral code copied!');
+    toast.success('Referral code copied!'); // Use toast.success
   };
 
   const handleWhatsAppShare = () => {
     if (!referralCode) {
-      alert('Please generate a referral code first!');
+      toast.error('Please generate a referral code first!'); // Use toast.error
       return;
     }
 

@@ -4,6 +4,8 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { storage, db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'react-toastify'; // Import toast
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const KycVerify = () => {
   const [frontFile, setFrontFile] = useState(null);
@@ -11,9 +13,9 @@ const KycVerify = () => {
   const [frontPreview, setFrontPreview] = useState('');
   const [backPreview, setBackPreview] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const [uid, setUid] = useState(null);
+  const [kycStatus, setKycStatus] = useState(null); // New state for KYC status
+  const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -22,7 +24,9 @@ const KycVerify = () => {
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
+        if (userSnap.exists()) {
+          setKycStatus(userSnap.data().kycStatus);
+        } else {
           const generateReferralCode = () => {
             const prefix = (user.displayName || 'REF').substring(0, 3).toUpperCase();
             const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -37,9 +41,11 @@ const KycVerify = () => {
             referralCode: generateReferralCode(),
             createdAt: new Date().toISOString(),
           });
+          setKycStatus(null);
         }
       } else {
         setUid(null);
+        setKycStatus(null);
       }
     });
 
@@ -51,7 +57,6 @@ const KycVerify = () => {
     if (file) {
       setFrontFile(file);
       setFrontPreview(URL.createObjectURL(file));
-      setError('');
     }
   };
 
@@ -60,18 +65,16 @@ const KycVerify = () => {
     if (file) {
       setBackFile(file);
       setBackPreview(URL.createObjectURL(file));
-      setError('');
     }
   };
 
   const handleSubmit = async () => {
     if (!frontFile || !backFile || !uid) {
-      setError('Please upload both front and back Aadhaar images.');
+      toast.error('Please upload both front and back Aadhaar images.');
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
       const frontRef = ref(storage, `kyc/${uid}/aadhaar_front_${uuidv4()}`);
@@ -90,34 +93,28 @@ const KycVerify = () => {
         kycSubmittedAt: new Date().toISOString(),
       });
 
-      setSuccess(true);
+      toast.success('KYC Submitted! Your documents are under review.');
+      navigate('/profile'); // Redirect to profile page
     } catch (err) {
       console.error(err);
-      setError('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     }
 
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        window.location.href = '/profile';
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
-  if (success) {
+  if (kycStatus === 'Approved') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
         <div className="bg-white p-6 rounded-xl shadow-md text-center border-t-4 border-green-500 max-w-md">
           <div className="w-16 h-16 bg-green-100 rounded-full mx-auto mb-4 flex items-center justify-center">
             ✅
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">KYC Submitted!</h2>
-          <p className="text-gray-600">Your documents have been received and are under review.</p>
-          <p className="text-sm text-gray-500 mt-3">Redirecting to profile in 3 seconds...</p>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">KYC Already Approved!</h2>
+          <p className="text-gray-600">Your KYC verification is complete.</p>
+          <p className="text-sm text-gray-500 mt-3">
+            <a href="/home" className="text-indigo-600 hover:underline">Go back to Home</a>
+          </p>
         </div>
       </div>
     );
@@ -135,8 +132,6 @@ const KycVerify = () => {
           <h2 className="text-2xl font-bold text-gray-800">Upload Aadhaar Front & Back</h2>
           <p className="text-sm text-gray-600 mt-1">For KYC verification, upload clear images of both sides.</p>
         </div>
-
-        {error && <p className="text-sm text-red-600 mb-4 text-center">{error}</p>}
 
         {/* Front Preview */}
         <div className="mb-4">
