@@ -160,13 +160,13 @@ export function Matchmaking() {
   };
 
   // Eye-catchy VS row with avatars + always centered VS
-  const VSRow = ({ playerA, playerB, amount }) => (
+  const VSRow = ({ playerA, playerB, amount, children }) => (
     <motion.div
       initial={{ opacity: 0, x: -50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 50 }}
       transition={{ duration: 0.4 }}
-      className="grid  border-2 grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-1 my-2 rounded-xl shadow-lg bg-gradient-to-r from-blue-100 to-purple-100 hover:scale-[1.02] transition-transform"
+      className="grid  border-2 grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-3 my-2 rounded-xl shadow-lg bg-gradient-to-r from-blue-100 to-purple-100 hover:scale-[1.02] transition-transform"
     >
       {/* Left Player */}
       <div className="flex items-center gap-2 justify-start">
@@ -189,6 +189,7 @@ export function Matchmaking() {
       <span className="col-span-3 text-center mt-2  text-green-700 font-bold">
         Rs {amount}
       </span>
+      {children && <div className="col-span-3 text-center mt-2">{children}</div>}
     </motion.div>
   );
 
@@ -337,21 +338,36 @@ export function Matchmaking() {
                 </div>
               ) : (
                 <ul>
-                  {matches.map((m, i) => (
-                    <motion.li
-                      key={m.id || i}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <VSRow
-                        playerA={m.playerA}
-                        playerB={m.playerB}
-                        amount={m.amount}
-                      />
-                    </motion.li>
-                  ))}
+                  {matches.map((m, i) => {
+                    const isUserInMatch =
+                      user && (m.playerA.uid === user.uid || m.playerB.uid === user.uid);
+                    return (
+                      <motion.li
+                        key={m.id || i}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <VSRow
+                          playerA={m.playerA}
+                          playerB={m.playerB}
+                          amount={m.amount}
+                        >
+                          {isUserInMatch && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => navigate(`/room/${m.id}`)}
+                              className="px-6 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 shadow-md"
+                            >
+                              View Match
+                            </motion.button>
+                          )}
+                        </VSRow>
+                      </motion.li>
+                    );
+                  })}
                 </ul>
               )}
             </AnimatePresence>
