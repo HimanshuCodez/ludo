@@ -9,8 +9,6 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-
-import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-toastify'; // Import toast
 
 const AdminKycApprove = () => {
@@ -125,11 +123,7 @@ const AdminKycApprove = () => {
               </button>
             </div>
 
-            {statusMessage && (
-              <div className="mt-4 text-green-700 bg-green-100 px-3 py-2 rounded text-sm">
-                {statusMessage}
-              </div>
-            )}
+           
           </div>
         )}
       </div>
