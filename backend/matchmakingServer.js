@@ -267,11 +267,15 @@ io.on('connection', (socket) => {
   socket.on('match:updateStatus', async ({ roomId, status }) => {
     const match = matches.find(m => m.id === roomId);
     if (match) {
-        match.status = status;
-        await saveMatchToFirestore(match);
-        await saveMatchesToFile();
+        match.status = status; // Update in-memory state
+
+        // Update Firestore document safely
+        const db = admin.firestore();
+        await db.collection('matches').doc(roomId).update({ status: status });
+        
+        await saveMatchesToFile(); // Persist in-memory state to JSON
         console.log(`[Server] Match ${roomId} status updated to ${status}`);
-        updateAllQueues();
+        updateAllQueues(); // Notify clients
     }
   });
 
