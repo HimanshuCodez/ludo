@@ -67,7 +67,11 @@ export function Matchmaking() {
     });
 
     socket.on("updateMatches", (list) => {
-      setMatches(list);
+      const ongoingMatches = list.filter(
+        (match) =>
+          match.status !== "pending_approval" && match.status !== "canceled"
+      );
+      setMatches(ongoingMatches);
     });
 
     socket.on("yourChallengeId", (id) => {

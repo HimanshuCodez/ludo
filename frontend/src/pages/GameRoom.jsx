@@ -283,6 +283,8 @@ export function GameRoom() {
         winningPlayerProofUrl: downloadURL,
       });
 
+      socketRef.current.emit('match:updateStatus', { roomId, status: 'pending_approval' });
+
       setUploading(false);
       setShowSuccess(true);
     } catch (err) {
@@ -320,6 +322,8 @@ export function GameRoom() {
         canceledBy: user.uid,
         canceledAt: new Date().toISOString(),
       });
+
+      socketRef.current.emit('match:updateStatus', { roomId, status: 'canceled' });
 
       setGameResult('CANCEL');
       setShowSuccess(true);

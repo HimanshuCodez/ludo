@@ -264,6 +264,17 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('gameResultUpdate', match.playerResults);
   });
 
+  socket.on('match:updateStatus', async ({ roomId, status }) => {
+    const match = matches.find(m => m.id === roomId);
+    if (match) {
+        match.status = status;
+        await saveMatchToFirestore(match);
+        await saveMatchesToFile();
+        console.log(`[Server] Match ${roomId} status updated to ${status}`);
+        updateAllQueues();
+    }
+  });
+
   socket.on('disconnect', async () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
     const wasInChallenge = challenges.some(c => c.createdBy === socket.id);
@@ -283,7 +294,7 @@ io.on('connection', (socket) => {
   }
 
   function getClientMatches() {
-    return matches.map(m => ({ id: m.id, playerA: m.playerA, playerB: m.playerB, amount: m.amount }));
+    return matches.map(m => ({ id: m.id, playerA: m.playerA, playerB: m.playerB, amount: m.amount, status: m.status }));
   }
 });
 
