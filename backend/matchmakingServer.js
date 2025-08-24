@@ -286,12 +286,22 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
-    console.log(`❌ Socket disconnected: ${socket.id}`);
-    // const wasInChallenge = challenges.some(c => c.createdBy === socket.id);
-    // if (wasInChallenge) {
-    //     challenges = challenges.filter(c => c.createdBy !== socket.id);
-    //     updateAllQueues();
-    // }
+    console.log(`[Server] ❌ Socket disconnected: ${socket.id}`);
+
+    // Find if the disconnected socket was associated with an open challenge
+    const challengeIndex = challenges.findIndex(c => c.createdBy === socket.id);
+
+    // If a challenge was found, remove it and notify clients
+    if (challengeIndex !== -1) {
+      const challengeId = challenges[challengeIndex].id;
+      console.log(`[Server] Disconnected user was creator of challenge ${challengeId}. Removing it.`);
+      
+      // Remove the challenge from the array
+      challenges.splice(challengeIndex, 1);
+      
+      // Broadcast the updated list of challenges to all clients
+      updateAllQueues();
+    }
   });
 
   function updateAllQueues() {
