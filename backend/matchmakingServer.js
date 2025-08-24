@@ -287,11 +287,11 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', async () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
-    const wasInChallenge = challenges.some(c => c.createdBy === socket.id);
-    if (wasInChallenge) {
-        challenges = challenges.filter(c => c.createdBy !== socket.id);
-        updateAllQueues();
-    }
+    // const wasInChallenge = challenges.some(c => c.createdBy === socket.id);
+    // if (wasInChallenge) {
+    //     challenges = challenges.filter(c => c.createdBy !== socket.id);
+    //     updateAllQueues();
+    // }
   });
 
   function updateAllQueues() {
