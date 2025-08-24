@@ -267,6 +267,7 @@ io.on('connection', (socket) => {
   socket.on('match:updateStatus', async ({ roomId, status }) => {
     const match = matches.find(m => m.id === roomId);
     if (match) {
+      try {
         match.status = status; // Update in-memory state
 
         // Update Firestore document safely
@@ -276,6 +277,11 @@ io.on('connection', (socket) => {
         await saveMatchesToFile(); // Persist in-memory state to JSON
         console.log(`[Server] Match ${roomId} status updated to ${status}`);
         updateAllQueues(); // Notify clients
+      } catch (error) {
+        console.error(`[Server] Error updating match status in Firestore:`, error);
+        // Optional: notify the client that the update failed
+        socket.emit('error', { message: 'Failed to update match status.' });
+      }
     }
   });
 
