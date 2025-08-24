@@ -345,8 +345,7 @@ export function GameRoom() {
     setShowCancelOptions(false);
   };
 
-  const handleConfirmLeaveGame = async () => {
-    await handleCancelReasonSubmit('Left Game');
+  const handleConfirmLeaveGame = () => {
     setShowLeaveConfirmationModal(false);
     if (blocker) {
       blocker.proceed(); // Proceed with the blocked navigation
