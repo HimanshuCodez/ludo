@@ -37,6 +37,7 @@ export function GameRoom() {
   const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
   const navigate = useNavigate();
+  const [isHost, setIsHost] = useState(false);
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => {
@@ -91,6 +92,13 @@ export function GameRoom() {
       console.log(`[Client] Received roomStateUpdate:`, data);
       setPlayers(data.players.filter((p) => p && p.id));
       setGameAmount(data.amount || 0);
+
+      // Determine if the current user is the host (playerA)
+      if (user && data.players && data.players.length > 0) {
+        const host = data.players[0];
+        setIsHost(user.uid === host.uid);
+      }
+
       if (data.generatedRoomCode && data.generatedRoomCode !== generatedRoomCode) {
         setGeneratedRoomCode(data.generatedRoomCode);
         setGameStarted(true);
@@ -541,35 +549,43 @@ export function GameRoom() {
                   )}
                 </div>
 
-                {generatedRoomCode && (
-                  <button
-                    onClick={handleJoinWithRoomCode}
-                    className="w-full max-w-xs bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700 transition mb-3"
-                    disabled={isRedirecting}
-                  >
-                    {isRedirecting ? "Opening Ludo King..." : "🎮 Join Ludo Game"}
-                  </button>
-                )}
-
-                {!gameStarted && (
-                  <div className="w-full max-w-xs border-t pt-3">
-                    <p className="text-xs text-gray-600 mb-2 text-center">Paste room code from Ludo King:</p>
-                    <input
-                      type="text"
-                      value={userEnteredRoomCode}
-                      onChange={(e) => setUserEnteredRoomCode(e.target.value)}
-                      placeholder="Enter Ludo Room Code"
-                      className="border w-full text-lg py-2 px-3 rounded focus:ring focus:ring-blue-300 mb-3"
-                      maxLength={8}
-                    />
+                {generatedRoomCode ? (
+                  // If code is present, show Play Now button only to the opponent
+                  !isHost && (
                     <button
-                      onClick={handleSendRoomCode}
-                      className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
+                      onClick={handleJoinWithRoomCode}
+                      className="w-full max-w-xs bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 transition-transform transform hover:scale-105 animate-pulse"
                       disabled={isRedirecting}
                     >
-                      {isRedirecting ? "Opening Ludo King..." : "Join & Play"}
+                      {isRedirecting ? "Opening Ludo King..." : "🚀 Play Now!"}
                     </button>
-                  </div>
+                  )
+                ) : (
+                  // If no code yet, show input to host, or waiting message to opponent
+                  isHost ? (
+                    <div className="w-full max-w-xs border-t pt-3">
+                      <p className="text-xs text-gray-600 mb-2 text-center">You are the host. Paste room code from Ludo King:</p>
+                      <input
+                        type="text"
+                        value={userEnteredRoomCode}
+                        onChange={(e) => setUserEnteredRoomCode(e.target.value)}
+                        placeholder="Enter Ludo Room Code"
+                        className="border w-full text-lg py-2 px-3 rounded focus:ring focus:ring-blue-300 mb-3"
+                        maxLength={8}
+                      />
+                      <button
+                        onClick={handleSendRoomCode}
+                        className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
+                        disabled={isRedirecting}
+                      >
+                        {isRedirecting ? "Opening Ludo King..." : "Join & Play"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-xs border-t pt-3 text-center">
+                      <p className="text-gray-500 animate-pulse">⏳ Waiting for host to provide the room code...</p>
+                    </div>
+                  )
                 )}
 
                 {copied && (
