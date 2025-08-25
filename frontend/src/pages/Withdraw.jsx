@@ -27,7 +27,7 @@ const Withdraw = () => {
         const userRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userRef);
         if (docSnap.exists()) {
-          setUserBalance(docSnap.data().depositChips || 0);
+          setUserBalance(docSnap.data().winningChips || 0);
         }
       }
     };
