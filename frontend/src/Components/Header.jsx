@@ -12,6 +12,7 @@ export function Header() {
   const auth = getAuth();
   const user = auth.currentUser;
   const [balance, setBalance] = useState(0);
+  const [winBalance, WinsetBalance] = useState(0);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -22,12 +23,15 @@ export function Header() {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setBalance(parseFloat(userData.depositChips) || 0);
+            WinsetBalance(parseFloat(userData.winningChips) || 0);
           } else {
             setBalance(0); // Default to 0 if no document exists
+           WinsetBalance(0); // Default to 0 if no document exists
           }
         } catch (error) {
           console.error('Error fetching balance:', error);
           setBalance(0); // Fallback to 0 on error
+          WinsetBalance(0); // Fallback to 0 on error
         }
       }
     };
@@ -61,7 +65,10 @@ export function Header() {
               onClick={() => navigate('/AddCash')}
               className="font-roboto text-white bg-linear-to-r from-gradient1 to-gradient2 rounded-xs flex py-1 pl-2 pr-[7px] w-[65px] h-[28px] justify-between"
             >
-              <div className="">₹{balance.toFixed(2)}</div>
+            <div className="">
+  ₹{(balance + winBalance).toFixed(2)}
+</div>
+
               <div className="bg-plus w-3 h-3 text-[12px] flex justify-center items-center mt-[5px]">
                 +
               </div>

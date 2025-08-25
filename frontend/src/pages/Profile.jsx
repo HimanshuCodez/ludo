@@ -9,7 +9,7 @@ import moneyLogo from '../assets/money.png';
 import battleLogo from '../assets/battle.png';
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export function Profile() {
@@ -17,23 +17,41 @@ export function Profile() {
   const [userData, setUserData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
+  const [battlesPlayed, setBattlesPlayed] = useState(0);
+  const [referralsCount, setReferralsCount] = useState(0);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchData = async () => {
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) return;
 
+      // Fetch user data
       const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        setUserData(data);
-        setName(data.name || 'Player');
+      const userSnap = await getDoc(userRef);
+      let currentUserData = null;
+      if (userSnap.exists()) {
+        currentUserData = userSnap.data();
+        setUserData(currentUserData);
+        setName(currentUserData.name || 'Player');
+      }
+
+      // Fetch battles played count
+      const matchesRef = collection(db, 'matches');
+      const matchesQuery = query(matchesRef, where('players', 'array-contains', user.uid));
+      const matchesSnapshot = await getDocs(matchesQuery);
+      setBattlesPlayed(matchesSnapshot.size);
+
+      // Fetch referrals count
+      if (currentUserData && currentUserData.referralCode) {
+        const usersRef = collection(db, 'users');
+        const referralsQuery = query(usersRef, where('referredBy', '==', currentUserData.referralCode));
+        const referralsSnapshot = await getDocs(referralsQuery);
+        setReferralsCount(referralsSnapshot.size);
       }
     };
 
-    fetchUser();
+    fetchData();
   }, []);
 
   const handleSave = async () => {
@@ -128,9 +146,10 @@ export function Profile() {
           <div className='flex items-center justify-between p-4 bg-yellow-100 border border-yellow-400 rounded-lg'>
             <div className='flex items-center space-x-2'>
               <img src={moneyLogo} className='w-6 h-6' />
+               
               <span className='font-medium'>Coins Won</span>
             </div>
-            <span className='font-semibold text-yellow-700'>0</span>
+            <span className='font-semibold text-yellow-700'> {userData?.winningChips || '0'}</span>
           </div>
 
           <div className='flex items-center justify-between p-4 bg-blue-100 border border-blue-400 rounded-lg'>
@@ -138,7 +157,7 @@ export function Profile() {
               <img src={battleLogo} className='w-6 h-6' />
               <span className='font-medium'>Battles Played</span>
             </div>
-            <span className='font-semibold text-blue-700'>0</span>
+            <span className='font-semibold text-blue-700'>{battlesPlayed}</span>
           </div>
 
           <div className='flex items-center justify-between p-4 bg-green-100 border border-green-400 rounded-lg'>
@@ -146,7 +165,7 @@ export function Profile() {
               <img src={referLogo} className='w-6 h-6' />
               <span className='font-medium'>Referrals</span>
             </div>
-            <span className='font-semibold text-green-700'>0</span>
+            <span className='font-semibold text-green-700'>{referralsCount}</span>
           </div>
         </div>
 
