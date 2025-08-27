@@ -102,12 +102,6 @@ const WithdrawAdmin = () => {
                     <span>Request Amount:</span>
                     <span className="font-bold">₹{user.withdrawalAmount?.toFixed(2) || '0.00'}</span>
                   </div>
-                  
-                  <div className="border-t my-2"></div>
-                  <div className="flex justify-between text-base">
-                    <span className="font-semibold">Final Payout Amount:</span>
-                    <span className="font-bold text-green-600">₹{(user.withdrawalAmount * 0.95).toFixed(2) || '0.00'}</span>
-                  </div>
                 </div>
               </div>
 

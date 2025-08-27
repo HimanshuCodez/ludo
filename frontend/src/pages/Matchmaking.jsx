@@ -17,6 +17,7 @@ export function Matchmaking() {
   const [myChallengeId, setMyChallengeId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(0);
+   const [winBalance, WinsetBalance] = useState(0);
   const [userName, setUserName] = useState("Anonymous");
   const [error, setError] = useState("");
   const socketRef = useRef(null);
@@ -33,14 +34,17 @@ export function Matchmaking() {
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setBalance(parseFloat(userData.depositChips) || 0);
+            WinsetBalance(parseFloat(userData.winningChips) || 0);
             setUserName(userData.name || "Anonymous");
           } else {
             setBalance(0);
+             WinsetBalance(0);
             setUserName("Anonymous");
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
           setBalance(0);
+           WinsetBalance(0);
           setUserName("Anonymous");
         }
       }
@@ -205,7 +209,7 @@ export function Matchmaking() {
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
           <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
           <div className="text-gray-700 mb-3">
-            Your Balance: ₹{balance.toFixed(2)}
+            Your Balance: ₹ ₹{(balance + winBalance).toFixed(2)}
           </div>
           {error && (
             <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">

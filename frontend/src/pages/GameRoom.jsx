@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useBlocker } from "react-router-dom";
+import { useParams, useNavigate, useBlocker, Link } from "react-router-dom";
 import { io } from "socket.io-client";
 import { Header } from "../Components/Header";
 import { Footer } from "../Components/Footer";
@@ -450,13 +450,14 @@ export function GameRoom() {
                   ? 'Your result has been recorded. Keep practicing!'
                   : 'Your cancellation has been recorded.'}
               </p>
-            </div>
+            </div><Link to="/home">
             <button
               onClick={resetAll}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               Play Another Game
             </button>
+            </Link>
           </div>
         </div>
       );
@@ -578,7 +579,7 @@ export function GameRoom() {
                         className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition"
                         disabled={isRedirecting}
                       >
-                        {isRedirecting ? "Opening Ludo King..." : "Join & Play"}
+                        {isRedirecting ? "Opening Ludo King..." : "Play"}
                       </button>
                     </div>
                   ) : (
