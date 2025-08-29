@@ -8,6 +8,8 @@ import {
   updateDoc,
   doc,
   increment,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify'; // Import toast
@@ -45,13 +47,24 @@ const WithdrawAdmin = () => {
     };
 
     if (action === 'approve') {
-      // On approval, deduct the full requested amount from the user's balance.
-      updateData.depositChips = increment(-request.withdrawalAmount);
+      // On approval, deduct from winningChips.
+      updateData.winningChips = increment(-request.withdrawalAmount);
     } 
     // For rejection, we don't touch the balance, just reset the withdrawal fields.
 
     try {
       await updateDoc(userRef, updateData);
+
+      if (action === 'approve') {
+        const transactionRef = collection(db, 'users', id, 'transactions');
+        await addDoc(transactionRef, {
+            type: 'withdrawal',
+            amount: request.withdrawalAmount,
+            status: 'Approved',
+            timestamp: serverTimestamp(),
+        });
+      }
+
       toast.success(`Withdrawal request ${action === 'approve' ? 'approved' : 'rejected'}.`);
       setRequests(prev => prev.filter(user => user.id !== id));
     } catch (error) {

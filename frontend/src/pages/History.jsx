@@ -3,7 +3,7 @@ import { Header } from '../Components/Header';
 import { Footer } from '../Components/Footer';
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export function History() {
@@ -23,16 +23,27 @@ export function History() {
             const user = auth.currentUser;
             if (!user) return;
 
-            // This is a mock fetch. You should adapt it to your actual firestore structure.
-            // For example, you might have subcollections for each history type.
-            const mockData = {
-                 credits: [{ amount: 50, date: '2023-10-27' }, { amount: 100, date: '2023-10-26' }],
-                 withdrawals: [{ amount: 20, date: '2023-10-25' }],
-                 games: [{ result: 'Win', opponent: 'Player2', amount: 10, date: '2023-10-27' }, { result: 'Loss', opponent: 'Player3', amount: -10, date: '2023-10-26' }],
-                 penalties: [{ reason: 'Left Game', amount: -5, date: '2023-10-25' }],
-                 bonuses: [{ type: 'Signup Bonus', amount: 10, date: '2023-10-24' }]
+            const transactionsRef = collection(db, 'users', user.uid, 'transactions');
+            const q = query(transactionsRef, orderBy('timestamp', 'desc'));
+            const querySnapshot = await getDocs(q);
+
+            const transactions = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    ...data,
+                    id: doc.id,
+                    date: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A'
+                };
+            });
+
+            const history = {
+                withdrawals: transactions.filter(t => t.type === 'withdrawal'),
+                credits: transactions.filter(t => t.type === 'credit'),
+                games: transactions.filter(t => ['game_win', 'game_loss'].includes(t.type)),
+                penalties: transactions.filter(t => t.type === 'penalty'),
+                bonuses: transactions.filter(t => t.type === 'bonus')
             };
-            setUserData(mockData);
+            setUserData(history);
         };
 
         fetchHistory();
