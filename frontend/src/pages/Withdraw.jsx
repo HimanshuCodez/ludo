@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'react-toastify'; // Import toast
 
 const Withdraw = () => {
@@ -21,17 +21,19 @@ const Withdraw = () => {
   const [cooldownTime, setCooldownTime] = useState('');
 
   useEffect(() => {
-    const fetchUserBalance = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userRef);
+    const user = auth.currentUser;
+    let unsubscribeFromBalance;
+
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      unsubscribeFromBalance = onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
           setUserBalance(docSnap.data().winningChips || 0);
+        } else {
+          setUserBalance(0);
         }
-      }
-    };
-    fetchUserBalance();
+      });
+    }
 
     const withdrawalTimestamp = localStorage.getItem('withdrawalTimestamp');
     if (withdrawalTimestamp) {
@@ -46,6 +48,12 @@ const Withdraw = () => {
         setOnCooldown(false);
       }
     }
+
+    return () => {
+      if (unsubscribeFromBalance) {
+        unsubscribeFromBalance();
+      }
+    };
   }, []);
 
   useEffect(() => {

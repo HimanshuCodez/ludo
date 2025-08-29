@@ -143,7 +143,7 @@ export function Matchmaking() {
       return;
     }
     const challenge = challenges.find((ch) => ch.id === challengeId);
-    if (challenge && balance >= challenge.amount) {
+    if (challenge && (balance + winBalance) >= challenge.amount) {
       setLoading(true);
       setError("");
       socketRef.current.emit(

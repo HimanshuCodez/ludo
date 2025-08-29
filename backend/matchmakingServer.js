@@ -68,35 +68,61 @@ async function deductFunds(uid1, uid2, amount) {
     const db = admin.firestore();
     const user1Ref = db.collection('users').doc(uid1);
     const user2Ref = db.collection('users').doc(uid2);
-  
+
     try {
-      await db.runTransaction(async (transaction) => {
-        const user1Doc = await transaction.get(user1Ref);
-        const user2Doc = await transaction.get(user2Ref);
-  
-        if (!user1Doc.exists || !user2Doc.exists) {
-          throw new Error('One or both users not found in the database.');
-        }
-  
-        const user1Data = user1Doc.data();
-        const user2Data = user2Doc.data();
-  
-        const newBalance1 = (user1Data.depositChips || 0) - amount;
-        const newBalance2 = (user2Data.depositChips || 0) - amount;
-  
-        if (newBalance1 < 0 || newBalance2 < 0) {
-            if (newBalance1 < 0) throw new Error(`Insufficient funds for ${user1Data.name}.`);
-            throw new Error(`Insufficient funds for ${user2Data.name}.`);
-        }
-  
-        transaction.update(user1Ref, { depositChips: newBalance1 });
-        transaction.update(user2Ref, { depositChips: newBalance2 });
-      });
-      console.log(`[Server] Successfully deducted ${amount} from users ${uid1} and ${uid2}`);
-      return { success: true };
+        await db.runTransaction(async (transaction) => {
+            const user1Doc = await transaction.get(user1Ref);
+            const user2Doc = await transaction.get(user2Ref);
+
+            if (!user1Doc.exists || !user2Doc.exists) {
+                throw new Error('One or both users not found in the database.');
+            }
+
+            const user1Data = user1Doc.data();
+            const user2Data = user2Doc.data();
+
+            // Process User 1
+            const totalBalance1 = (user1Data.depositChips || 0) + (user1Data.winningChips || 0);
+            if (totalBalance1 < amount) {
+                throw new Error(`Insufficient funds for ${user1Data.name}.`);
+            }
+            let remainingToDeduct1 = amount;
+            let newWinningChips1 = user1Data.winningChips || 0;
+            let newDepositChips1 = user1Data.depositChips || 0;
+
+            const fromWinnings1 = Math.min(newWinningChips1, remainingToDeduct1);
+            newWinningChips1 -= fromWinnings1;
+            remainingToDeduct1 -= fromWinnings1;
+
+            if (remainingToDeduct1 > 0) {
+                newDepositChips1 -= remainingToDeduct1;
+            }
+
+            // Process User 2
+            const totalBalance2 = (user2Data.depositChips || 0) + (user2Data.winningChips || 0);
+            if (totalBalance2 < amount) {
+                throw new Error(`Insufficient funds for ${user2Data.name}.`);
+            }
+            let remainingToDeduct2 = amount;
+            let newWinningChips2 = user2Data.winningChips || 0;
+            let newDepositChips2 = user2Data.depositChips || 0;
+
+            const fromWinnings2 = Math.min(newWinningChips2, remainingToDeduct2);
+            newWinningChips2 -= fromWinnings2;
+            remainingToDeduct2 -= fromWinnings2;
+
+            if (remainingToDeduct2 > 0) {
+                newDepositChips2 -= remainingToDeduct2;
+            }
+
+            transaction.update(user1Ref, { depositChips: newDepositChips1, winningChips: newWinningChips1 });
+            transaction.update(user2Ref, { depositChips: newDepositChips2, winningChips: newWinningChips2 });
+        });
+        console.log(`[Server] Successfully deducted ${amount} from users ${uid1} and ${uid2}`);
+        return { success: true };
     } catch (error) {
-      console.error(`[Server] Error in Firestore transaction for users ${uid1}, ${uid2}:`, error);
-      return { success: false, message: error.message || 'A database error occurred.' };
+        console.error(`[Server] Error in Firestore transaction for users ${uid1}, ${uid2}:`, error);
+        return { success: false, message: error.message || 'A database error occurred.' };
     }
 }
 
@@ -133,6 +159,23 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Bet amount must be in multiples of 50.' });
       if (ack) ack(false);
       return;
+    }
+
+    try {
+        const userRef = admin.firestore().collection('users').doc(uid);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            throw new Error('User not found.');
+        }
+        const userData = userDoc.data();
+        const totalBalance = (userData.depositChips || 0) + (userData.winningChips || 0);
+        if (totalBalance < amount) {
+            throw new Error('Insufficient balance to create this challenge.');
+        }
+    } catch (error) {
+        socket.emit('error', { message: error.message || 'Failed to verify user balance.' });
+        if (ack) ack(false);
+        return;
     }
 
     const challenge = {
