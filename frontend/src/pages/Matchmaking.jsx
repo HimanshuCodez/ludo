@@ -110,7 +110,7 @@ export function Matchmaking() {
         toast.error("Amount must be in multiples of 50.");
         return;
       }
-      if (balance >= challengeAmount) {
+      if ((balance + winBalance) >= challengeAmount) {
         setLoading(true);
         setError("");
         socketRef.current.emit(
