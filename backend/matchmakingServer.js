@@ -81,7 +81,7 @@ async function deductFunds(uid1, uid2, amount) {
             const user1Data = user1Doc.data();
             const user2Data = user2Doc.data();
 
-            // Process User 1
+            // --- Process User 1 ---
             const totalBalance1 = (user1Data.depositChips || 0) + (user1Data.winningChips || 0);
             if (totalBalance1 < amount) {
                 throw new Error(`Insufficient funds for ${user1Data.name}.`);
@@ -90,15 +90,17 @@ async function deductFunds(uid1, uid2, amount) {
             let newWinningChips1 = user1Data.winningChips || 0;
             let newDepositChips1 = user1Data.depositChips || 0;
 
-            const fromWinnings1 = Math.min(newWinningChips1, remainingToDeduct1);
-            newWinningChips1 -= fromWinnings1;
-            remainingToDeduct1 -= fromWinnings1;
+            // Prioritize deducting from deposit chips first
+            const fromDeposit1 = Math.min(newDepositChips1, remainingToDeduct1);
+            newDepositChips1 -= fromDeposit1;
+            remainingToDeduct1 -= fromDeposit1;
 
+            // Deduct the rest from winning chips if necessary
             if (remainingToDeduct1 > 0) {
-                newDepositChips1 -= remainingToDeduct1;
+                newWinningChips1 -= remainingToDeduct1;
             }
 
-            // Process User 2
+            // --- Process User 2 ---
             const totalBalance2 = (user2Data.depositChips || 0) + (user2Data.winningChips || 0);
             if (totalBalance2 < amount) {
                 throw new Error(`Insufficient funds for ${user2Data.name}.`);
@@ -107,12 +109,14 @@ async function deductFunds(uid1, uid2, amount) {
             let newWinningChips2 = user2Data.winningChips || 0;
             let newDepositChips2 = user2Data.depositChips || 0;
 
-            const fromWinnings2 = Math.min(newWinningChips2, remainingToDeduct2);
-            newWinningChips2 -= fromWinnings2;
-            remainingToDeduct2 -= fromWinnings2;
+            // Prioritize deducting from deposit chips first
+            const fromDeposit2 = Math.min(newDepositChips2, remainingToDeduct2);
+            newDepositChips2 -= fromDeposit2;
+            remainingToDeduct2 -= fromDeposit2;
 
+            // Deduct the rest from winning chips if necessary
             if (remainingToDeduct2 > 0) {
-                newDepositChips2 -= remainingToDeduct2;
+                newWinningChips2 -= remainingToDeduct2;
             }
 
             transaction.update(user1Ref, { depositChips: newDepositChips1, winningChips: newWinningChips1 });
