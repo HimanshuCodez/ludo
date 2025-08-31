@@ -333,42 +333,11 @@ export function GameRoom() {
     }
   };
 
-  const handleCancelReasonSubmit = async (reason) => {
+  const handleCancelReasonSubmit = (reason) => {
     if (!user) return;
-
-    if (!generatedRoomCode) {
-      socketRef.current.emit('match:cancel', { roomId });
-      // The server will notify us to redirect via 'matchCanceled'
-      return;
-    }
-
-    setUploading(true);
-    try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        lastGameResult: 'Canceled',
-        lastGameCancelReason: reason,
-        lastGameAt: new Date().toISOString(),
-      });
-
-      // Update match status in 'matches' collection
-      const matchRef = doc(db, 'matches', roomId);
-      await updateDoc(matchRef, {
-        status: 'canceled',
-        canceledBy: user.uid,
-        canceledAt: new Date().toISOString(),
-      });
-
-      socketRef.current.emit('match:updateStatus', { roomId, status: 'canceled' });
-
-      setGameResult('CANCEL');
-      setShowSuccess(true);
-      setShowCancelOptions(false);
-    } catch (error) {
-      console.error("Error submitting cancellation reason: ", error);
-      setUploadError('Failed to submit reason. Please try again.');
-    } finally {
-      setUploading(false);
-    }
+    // Always emit the cancel event to trigger the refund/redirect flow.
+    // The server already checks if the game has started, so it's safe.
+    socketRef.current.emit('match:cancel', { roomId });
   };
 
   const resetAll = () => {
