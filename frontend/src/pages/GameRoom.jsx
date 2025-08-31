@@ -186,6 +186,14 @@ export function GameRoom() {
         }
     });
 
+    socket.on("matchCancellationPending", ({ message }) => {
+      toast.dismiss('cancelToast');
+      console.log(`[Client] Received matchCancellationPending: ${message}`);
+      toast.info(message, { autoClose: 5000 });
+      setShowSuccess(true);
+      setGameResult('CANCELLATION_PENDING');
+    });
+
     return () => {
       socket.off("connect");
       socket.off("roomStateUpdate");
@@ -199,6 +207,7 @@ export function GameRoom() {
       socket.off("reconnect");
       socket.off("matchCanceled");
       socket.off("matchResultConfirmed");
+      socket.off("matchCancellationPending");
     };
   }, [roomId, user, userName]);
 

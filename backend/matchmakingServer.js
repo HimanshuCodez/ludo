@@ -463,31 +463,49 @@ io.on('connection', (socket) => {
         return socket.emit('error', { message: `Cannot cancel. Match status is not active (${match.status}).` });
     }
 
-    if (match.generatedRoomCode) {
-        console.log(`[Server] 'match:cancel' rejected. Room code already generated: ${match.generatedRoomCode}`);
-        return socket.emit('error', { message: `Cannot cancel. Room code already generated.` });
+    // Determine if the canceling player is playerA or playerB
+    const cancelingPlayer = match.playerA.id === socket.id ? match.playerA : match.playerB;
+    if (!cancelingPlayer) {
+        console.error(`[Server] 'match:cancel' failed: Canceling player not found in match.`);
+        return socket.emit('error', { message: 'Canceling player not found.' });
     }
-    
-    console.log(`[Server] Conditions met. Proceeding with cancellation for match ${roomId}.`);
-    match.status = 'canceled';
-    match.cancelReason = reason;
 
-    console.log(`[Server] Attempting to refund funds for match ${roomId}.`);
-    const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
-    console.log(`[Server] Refund result for match ${roomId}:`, refundResult);
+    if (!match.generatedRoomCode) {
+        // Case 1: No room code shared - immediate refund
+        console.log(`[Server] No room code shared. Proceeding with immediate refund for match ${roomId}.`);
+        match.status = 'canceled';
+        match.cancelReason = reason;
+        match.cancelingPlayerUid = cancelingPlayer.uid; // Store who initiated the cancel
 
-    if (refundResult.success) {
-        console.log(`[Server] Refund successful. Saving match ${roomId} and notifying clients.`);
+        console.log(`[Server] Attempting to refund funds for match ${roomId}.`);
+        const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+        console.log(`[Server] Refund result for match ${roomId}:`, refundResult);
+
+        if (refundResult.success) {
+            console.log(`[Server] Refund successful. Saving match ${roomId} and notifying clients.`);
+            await saveMatchToFirestore(match);
+            await saveMatchesToFile();
+            io.to(roomId).emit('matchCanceled', { message: 'Match canceled. Your bet has been refunded.' });
+            updateAllQueues();
+            console.log(`[Server] 'matchCanceled' event emitted for room ${roomId}.`);
+        } else {
+            console.error(`[Server] CRITICAL: Refund failed for canceled match ${roomId}.`);
+            match.status = 'active'; // Revert status
+            io.to(roomId).emit('error', { message: `Critical error during refund. Please contact support.` });
+            console.log(`[Server] 'error' event emitted for room ${roomId} due to refund failure.`);
+        }
+    } else {
+        // Case 2: Room code shared - pending admin approval
+        console.log(`[Server] Room code shared. Setting match ${roomId} to pending_cancellation_approval.`);
+        match.status = 'pending_cancellation_approval';
+        match.cancelReason = reason;
+        match.cancelingPlayerUid = cancelingPlayer.uid; // Store who initiated the cancel
+
         await saveMatchToFirestore(match);
         await saveMatchesToFile();
-        io.to(roomId).emit('matchCanceled', { message: 'Match canceled. Your bet has been refunded.' });
+        io.to(roomId).emit('matchCancellationPending', { message: 'Your cancellation request is pending admin review.' });
         updateAllQueues();
-        console.log(`[Server] 'matchCanceled' event emitted for room ${roomId}.`);
-    } else {
-        console.error(`[Server] CRITICAL: Refund failed for canceled match ${roomId}.`);
-        match.status = 'active'; // Revert status
-        io.to(roomId).emit('error', { message: `Critical error during refund. Please contact support.` });
-        console.log(`[Server] 'error' event emitted for room ${roomId} due to refund failure.`);
+        console.log(`[Server] 'matchCancellationPending' event emitted for room ${roomId}.`);
     }
   });
 
@@ -512,32 +530,67 @@ io.on('connection', (socket) => {
     const match = matches.find(m => (m.playerA.id === socket.id || m.playerB.id === socket.id));
     if (!match) return;
 
-    // IMPORTANT: Do NOT refund if the match is already pending approval or completed.
-    if (match.status === 'pending_approval' || match.status === 'completed') {
-        console.log(`[Server] Player disconnected from match ${match.id}. Status is ${match.status}. No refund.`);
-        return; // Do not refund or cancel if already in a final/pending state.
-    }
-
-    if (match.status !== 'active' || match.generatedRoomCode) {
-        console.log(`[Server] Player disconnected from match ${match.id}. Status is ${match.status}, Room Code: ${match.generatedRoomCode}. No refund.`);
+    // If match is in a final state, do nothing
+    if (match.status === 'pending_approval' || match.status === 'completed' || match.status === 'canceled' || match.status === 'pending_cancellation_approval' || match.status === 'cancellation_rejected') {
+        console.log(`[Server] Player disconnected from match ${match.id}. Status is ${match.status}. No action taken.`);
         return;
     }
-    match.status = 'canceled';
 
-    console.log(`[Server] Player disconnected from match ${match.id}. Refunding.`);
-    const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
-    
-    if (refundResult.success) {
-        await saveMatchToFirestore(match);
-        await saveMatchesToFile();
-        const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
-        io.to(otherPlayerId).emit('matchCanceled', { message: 'Opponent disconnected. Your bet has been refunded.' });
-        updateAllQueues();
-    } else {
-        console.error(`[Server] CRITICAL: Refund failed for disconnected match ${match.id}.`);
-        const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
-        io.to(otherPlayerId).emit('error', { message: `Critical error during refund. Please contact support.` });
+    // If match is active and not in a final state, just notify the other player of disconnect.
+    // Do NOT change match status to 'canceled' automatically.
+    // Do NOT refund automatically.
+    console.log(`[Server] Player disconnected from match ${match.id}. Match status remains ${match.status}.`);
+    const otherPlayer = match.playerA.id === socket.id ? match.playerB : match.playerA;
+    if (otherPlayer && otherPlayer.id) {
+        io.to(otherPlayer.id).emit('opponentDisconnected', { message: 'Your opponent has disconnected.' });
     }
+  });
+
+  socket.on('admin:fetchCancellationRequests', async () => {
+    console.log(`[Server] Admin ${socket.id} requested pending cancellation requests.`);
+    const pendingCancellations = matches.filter(m => m.status === 'pending_cancellation_approval');
+    socket.emit('admin:cancellationRequests', pendingCancellations);
+  });
+
+  socket.on('admin:approveCancellation', async ({ matchId }) => {
+    console.log(`[Server] Admin ${socket.id} approving cancellation for match ${matchId}.`);
+    const match = matches.find(m => m.id === matchId && m.status === 'pending_cancellation_approval');
+
+    if (!match) {
+      console.error(`[Server] Approval failed: Match ${matchId} not found or not pending cancellation approval.`);
+      return socket.emit('admin:cancellationApprovalResult', { success: false, message: 'Match not found or not pending approval.' });
+    }
+
+    const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+
+    if (refundResult.success) {
+      match.status = 'canceled'; // Or 'refunded'
+      await saveMatchToFirestore(match);
+      await saveMatchesToFile();
+      io.to(match.id).emit('matchCanceled', { message: 'Your cancellation request has been approved and your bet refunded.' });
+      socket.emit('admin:cancellationApprovalResult', { success: true, message: 'Cancellation approved and refunded.' });
+      updateAllQueues();
+    } else {
+      console.error(`[Server] CRITICAL: Refund failed during admin approval for match ${matchId}.`);
+      socket.emit('admin:cancellationApprovalResult', { success: false, message: `Refund failed: ${refundResult.message}` });
+    }
+  });
+
+  socket.on('admin:rejectCancellation', async ({ matchId }) => {
+    console.log(`[Server] Admin ${socket.id} rejecting cancellation for match ${matchId}.`);
+    const match = matches.find(m => m.id === matchId && m.status === 'pending_cancellation_approval');
+
+    if (!match) {
+      console.error(`[Server] Rejection failed: Match ${matchId} not found or not pending cancellation approval.`);
+      return socket.emit('admin:cancellationApprovalResult', { success: false, message: 'Match not found or not pending approval.' });
+    }
+
+    match.status = 'cancellation_rejected';
+    await saveMatchToFirestore(match);
+    await saveMatchesToFile();
+    io.to(match.id).emit('matchCancellationRejected', { message: 'Your cancellation request has been rejected.' });
+    socket.emit('admin:cancellationApprovalResult', { success: true, message: 'Cancellation rejected.' });
+    updateAllQueues();
   });
 
   function updateAllQueues() {

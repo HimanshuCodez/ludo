@@ -20,6 +20,7 @@ import AdminKycApprove from "./AdminKycApprove";
 import TopUpConfirm from "./TopUpConfirm";
 import NoticeChange from "./NoticeChange";
 import AdminUpi from "./AdminUpi";
+import CancellationApprovalList from "./CancellationApprovalList";
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -67,6 +68,13 @@ const Dashboard = () => {
       key: "admin-upi",
       color: "text-indigo-600",
       bgColor: "bg-indigo-50 hover:bg-indigo-100",
+    },
+    {
+      icon: Users, // Using Users icon for now, can be changed later
+      label: "Cancellation Approvals",
+      key: "cancellation-approvals",
+      color: "text-red-600", // Red for attention
+      bgColor: "bg-red-50 hover:bg-red-100",
     },
   ];
 
@@ -175,6 +183,7 @@ const Dashboard = () => {
                   {activeSection === "top-up-admin" && "Top Up Requests"}
                   {activeSection === "notice-change" && "Notice Management"}
                   {activeSection === "admin-upi" && "UPI Management"}
+                  {activeSection === "cancellation-approvals" && "Cancellation Approvals"}
                 </h1>
                 <p className="text-sm text-gray-500">
                   Welcome back, Imran Khan
@@ -329,6 +338,25 @@ const Dashboard = () => {
                 </div>
                 <div className="p-6">
                   <NoticeChange />
+                </div>
+              </div>
+            )}
+
+            {activeSection === "cancellation-approvals" && (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-red-50 to-red-100 p-6 border-b border-red-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-red-500 rounded-xl">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800">Cancellation Approvals</h2>
+                      <p className="text-gray-600">Review and approve/reject cancellation requests</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <CancellationApprovalList />
                 </div>
               </div>
             )}
