@@ -165,7 +165,7 @@ async function awardWinnings(winnerUid, amount) {
     const db = admin.firestore();
     const winnerRef = db.collection('users').doc(winnerUid);
 
-    const totalAmount = amount * 2;
+    const totalAmount = amount ;
     const commission = totalAmount * 0.05;
     const winnerPayout = totalAmount - commission;
 
@@ -302,11 +302,27 @@ io.on('connection', (socket) => {
     if (ack) ack(true);
   });
 
-  socket.on('joinRoom', async ({ roomId, userName }) => {
+  socket.on('joinRoom', async ({ roomId, userName, uid }) => {
     const match = matches.find(m => m.id === roomId);
     if (!match) {
       socket.emit('roomNotFound', { message: 'Room not found.' });
       return;
+    }
+
+    let idChanged = false;
+    // Update socket.id on join/reconnect to handle reconnections
+    if (match.playerA.uid === uid) {
+        if (match.playerA.id !== socket.id) {
+            console.log(`[Server] Player A (${match.playerA.name}) reconnected with new socket ID: ${socket.id}`);
+            match.playerA.id = socket.id;
+            idChanged = true;
+        }
+    } else if (match.playerB.uid === uid) {
+        if (match.playerB.id !== socket.id) {
+            console.log(`[Server] Player B (${match.playerB.name}) reconnected with new socket ID: ${socket.id}`);
+            match.playerB.id = socket.id;
+            idChanged = true;
+        }
     }
 
     socket.join(roomId);
@@ -318,6 +334,11 @@ io.on('connection', (socket) => {
     };
 
     io.to(roomId).emit('roomStateUpdate', roomData);
+
+    if (idChanged) {
+      await saveMatchToFirestore(match);
+      await saveMatchesToFile();
+    }
   });
 
   socket.on('userProvidedRoomCode', async ({ roomId, code }) => {
@@ -427,37 +448,24 @@ io.on('connection', (socket) => {
 
   socket.on('match:cancel', async ({ roomId }) => {
     const match = matches.find(m => m.id === roomId);
-    if (!match) {
-        return socket.emit('error', { message: 'Match not found for cancellation.' });
-    }
+    if (!match) return;
 
-    // Ensure the cancellation is valid (no room code yet)
-    if (match.generatedRoomCode) {
-        return socket.emit('error', { message: 'Cannot cancel match after room code is generated.' });
+    if (match.status !== 'active' || match.generatedRoomCode) {
+        return;
     }
+    match.status = 'canceled';
 
-    // Ensure the requestor is part of the match
-    const isPlayerInMatch = match.playerA.id === socket.id || match.playerB.id === socket.id;
-    if (!isPlayerInMatch) {
-        return socket.emit('error', { message: 'You are not part of this match.' });
-    }
-
-    // Refund funds
+    console.log(`[Server] Match ${roomId} canceled by ${socket.id}. Refunding.`);
     const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
 
     if (refundResult.success) {
-        match.status = 'canceled';
         await saveMatchToFirestore(match);
         await saveMatchesToFile();
-
-        // Notify both players
-        io.to(roomId).emit('matchCanceled', { message: 'Match canceled by a player. Your bet has been refunded to your deposit chips.' });
-        
+        io.to(roomId).emit('matchCanceled', { message: 'Match canceled. Your bet has been refunded.' });
         updateAllQueues();
-        console.log(`[Server] Match ${roomId} canceled by ${socket.id}. Funds refunded.`);
     } else {
-        // If refund fails, something is wrong. Notify client.
-        socket.emit('error', { message: `Refund failed: ${refundResult.message}` });
+        console.error(`[Server] CRITICAL: Refund failed for canceled match ${roomId}.`);
+        io.to(roomId).emit('error', { message: `Critical error during refund. Please contact support.` });
     }
   });
 
@@ -479,29 +487,27 @@ io.on('connection', (socket) => {
       updateAllQueues();
     }
 
-    // Handle disconnection during an active match before room code is set
-    const match = matches.find(m => (m.playerA.id === socket.id || m.playerB.id === socket.id) && m.status === 'active');
-    if (match && !match.generatedRoomCode) {
-        console.log(`[Server] Player ${socket.id} disconnected from match ${match.id} before room code was set. Refunding.`);
-        
-        const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+    const match = matches.find(m => (m.playerA.id === socket.id || m.playerB.id === socket.id));
+    if (!match) return;
 
-        if (refundResult.success) {
-            match.status = 'canceled';
-            await saveMatchToFirestore(match);
-            await saveMatchesToFile();
+    if (match.status !== 'active' || match.generatedRoomCode) {
+        return;
+    }
+    match.status = 'canceled';
 
-            // Notify the other player
-            const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
-            io.to(otherPlayerId).emit('matchCanceled', { message: 'Opponent disconnected. Match canceled and your bet has been refunded to your deposit chips.' });
-            
-            updateAllQueues();
-            console.log(`[Server] Match ${match.id} canceled due to disconnect. Funds refunded.`);
-        } else {
-            console.error(`[Server] Refund failed for match ${match.id} after disconnect.`);
-            const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
-            io.to(otherPlayerId).emit('error', { message: `Critical: Refund failed for opponent disconnection. Please contact support.` });
-        }
+    console.log(`[Server] Player disconnected from match ${match.id}. Refunding.`);
+    const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+    
+    if (refundResult.success) {
+        await saveMatchToFirestore(match);
+        await saveMatchesToFile();
+        const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
+        io.to(otherPlayerId).emit('matchCanceled', { message: 'Opponent disconnected. Your bet has been refunded.' });
+        updateAllQueues();
+    } else {
+        console.error(`[Server] CRITICAL: Refund failed for disconnected match ${match.id}.`);
+        const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
+        io.to(otherPlayerId).emit('error', { message: `Critical error during refund. Please contact support.` });
     }
   });
 
