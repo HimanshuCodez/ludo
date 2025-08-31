@@ -336,9 +336,9 @@ export function GameRoom() {
 
   const handleCancelReasonSubmit = (reason) => {
     if (!user) return;
-    console.log("[Client] Attempting to cancel match. Emitting 'match:cancel'.");
+    console.log(`[Client] Attempting to cancel match with reason: ${reason}. Emitting 'match:cancel'.`);
     toast.loading("Sending cancellation request...", { toastId: 'cancelToast' });
-    socketRef.current.emit('match:cancel', { roomId });
+    socketRef.current.emit('match:cancel', { roomId, reason });
   };
 
   const resetAll = () => {
