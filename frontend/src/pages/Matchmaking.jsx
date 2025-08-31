@@ -209,7 +209,7 @@ export function Matchmaking() {
         <div className="w-full bg-white rounded-lg shadow p-5 mb-6">
           <div className="text-gray-700 mb-3">Welcome, {userName}!</div>
           <div className="text-gray-700 mb-3">
-            Your Balance: ₹ ₹{(balance + winBalance).toFixed(2)}
+            Your Balance: ₹{(balance + winBalance).toFixed(2)}
           </div>
           {error && (
             <div className="bg-red-100 text-red-700 px-3 py-2 rounded mb-4 text-sm">

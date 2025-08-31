@@ -126,6 +126,68 @@ async function deductFunds(uid1, uid2, amount) {
     }
 }
 
+async function refundFunds(uid1, uid2, amount) {
+    if (!uid1 || !uid2) {
+        console.error('[Server] Invalid user identifier for refund.');
+        return { success: false, message: 'Invalid user identifier for refund.' };
+    }
+    const db = admin.firestore();
+    const user1Ref = db.collection('users').doc(uid1);
+    const user2Ref = db.collection('users').doc(uid2);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const user1Doc = await transaction.get(user1Ref);
+            const user2Doc = await transaction.get(user2Ref);
+
+            if (!user1Doc.exists || !user2Doc.exists) {
+                throw new Error('One or both users not found for refund.');
+            }
+
+            const user1Data = user1Doc.data();
+            const newDepositChips1 = (user1Data.depositChips || 0) + amount;
+
+            const user2Data = user2Doc.data();
+            const newDepositChips2 = (user2Data.depositChips || 0) + amount;
+
+            transaction.update(user1Ref, { depositChips: newDepositChips1 });
+            transaction.update(user2Ref, { depositChips: newDepositChips2 });
+        });
+        console.log(`[Server] Successfully refunded ${amount} to users ${uid1} and ${uid2}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`[Server] Error in Firestore transaction for refund to users ${uid1}, ${uid2}:`, error);
+        return { success: false, message: error.message || 'A database error occurred during refund.' };
+    }
+}
+
+async function awardWinnings(winnerUid, amount) {
+    const db = admin.firestore();
+    const winnerRef = db.collection('users').doc(winnerUid);
+
+    const totalAmount = amount * 2;
+    const commission = totalAmount * 0.05;
+    const winnerPayout = totalAmount - commission;
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const winnerDoc = await transaction.get(winnerRef);
+            if (!winnerDoc.exists) {
+                throw new Error(`Winner user ${winnerUid} not found.`);
+            }
+            const winnerData = winnerDoc.data();
+            const newWinningChips = (winnerData.winningChips || 0) + winnerPayout;
+            transaction.update(winnerRef, { winningChips: newWinningChips });
+        });
+
+        console.log(`[Server] Awarded ${winnerPayout} to winner ${winnerUid}.`);
+        return { success: true, payout: winnerPayout };
+    } catch (error) {
+        console.error(`[Server] Error awarding winnings to ${winnerUid}:`, error);
+        return { success: false, message: error.message };
+    }
+}
+
 loadMatchesFromFile();
 
 io.on('connection', (socket) => {
@@ -307,6 +369,41 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('gameResultUpdate', match.playerResults);
   });
 
+  socket.on('match:iLost', async ({ roomId }) => {
+    const match = matches.find(m => m.id === roomId);
+    if (!match) return socket.emit('error', { message: 'Match not found.' });
+
+    // Prevent duplicate processing
+    if (match.status !== 'active') {
+        return console.log(`[Server] Match ${roomId} is not active, ignoring iLost event.`);
+    }
+
+    const loser = match.playerA.id === socket.id ? match.playerA : match.playerB;
+    const winner = match.playerA.id === socket.id ? match.playerB : match.playerA;
+
+    if (!loser || !winner) return socket.emit('error', { message: 'Could not identify players in the match.' });
+
+    // Award winnings to the winner
+    const awardResult = await awardWinnings(winner.uid, match.amount);
+
+    if (awardResult.success) {
+        match.status = 'completed';
+        match.winner = winner.uid;
+        match.loser = loser.uid;
+        await saveMatchToFirestore(match);
+        await saveMatchesToFile();
+
+        // Notify both players
+        io.to(loser.id).emit('matchResultConfirmed', { result: 'lost' });
+        io.to(winner.id).emit('matchResultConfirmed', { result: 'won', payout: awardResult.payout });
+        
+        updateAllQueues();
+        console.log(`[Server] Match ${roomId} completed. Winner: ${winner.name}, Loser: ${loser.name}`);
+    } else {
+        socket.emit('error', { message: `Failed to process match result: ${awardResult.message}` });
+    }
+  });
+
   socket.on('match:updateStatus', async ({ roomId, status }) => {
     const match = matches.find(m => m.id === roomId);
     if (match) {
@@ -328,6 +425,42 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('match:cancel', async ({ roomId }) => {
+    const match = matches.find(m => m.id === roomId);
+    if (!match) {
+        return socket.emit('error', { message: 'Match not found for cancellation.' });
+    }
+
+    // Ensure the cancellation is valid (no room code yet)
+    if (match.generatedRoomCode) {
+        return socket.emit('error', { message: 'Cannot cancel match after room code is generated.' });
+    }
+
+    // Ensure the requestor is part of the match
+    const isPlayerInMatch = match.playerA.id === socket.id || match.playerB.id === socket.id;
+    if (!isPlayerInMatch) {
+        return socket.emit('error', { message: 'You are not part of this match.' });
+    }
+
+    // Refund funds
+    const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+
+    if (refundResult.success) {
+        match.status = 'canceled';
+        await saveMatchToFirestore(match);
+        await saveMatchesToFile();
+
+        // Notify both players
+        io.to(roomId).emit('matchCanceled', { message: 'Match canceled by a player. Your bet has been refunded to your deposit chips.' });
+        
+        updateAllQueues();
+        console.log(`[Server] Match ${roomId} canceled by ${socket.id}. Funds refunded.`);
+    } else {
+        // If refund fails, something is wrong. Notify client.
+        socket.emit('error', { message: `Refund failed: ${refundResult.message}` });
+    }
+  });
+
   socket.on('disconnect', async () => {
     console.log(`[Server] ❌ Socket disconnected: ${socket.id}`);
 
@@ -344,6 +477,31 @@ io.on('connection', (socket) => {
       
       // Broadcast the updated list of challenges to all clients
       updateAllQueues();
+    }
+
+    // Handle disconnection during an active match before room code is set
+    const match = matches.find(m => (m.playerA.id === socket.id || m.playerB.id === socket.id) && m.status === 'active');
+    if (match && !match.generatedRoomCode) {
+        console.log(`[Server] Player ${socket.id} disconnected from match ${match.id} before room code was set. Refunding.`);
+        
+        const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+
+        if (refundResult.success) {
+            match.status = 'canceled';
+            await saveMatchToFirestore(match);
+            await saveMatchesToFile();
+
+            // Notify the other player
+            const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
+            io.to(otherPlayerId).emit('matchCanceled', { message: 'Opponent disconnected. Match canceled and your bet has been refunded to your deposit chips.' });
+            
+            updateAllQueues();
+            console.log(`[Server] Match ${match.id} canceled due to disconnect. Funds refunded.`);
+        } else {
+            console.error(`[Server] Refund failed for match ${match.id} after disconnect.`);
+            const otherPlayerId = match.playerA.id === socket.id ? match.playerB.id : match.playerA.id;
+            io.to(otherPlayerId).emit('error', { message: `Critical: Refund failed for opponent disconnection. Please contact support.` });
+        }
     }
   });
 

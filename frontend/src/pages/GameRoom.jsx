@@ -32,6 +32,7 @@ export function GameRoom() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [showCancelOptions, setShowCancelOptions] = useState(false);
+  const [showLostConfirmationModal, setShowLostConfirmationModal] = useState(false);
   const [showResultBox, setShowResultBox] = useState(true);
   const [timeLeft, setTimeLeft] = useState(20 * 60);
   const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState(false);
@@ -166,6 +167,23 @@ export function GameRoom() {
       socket.emit("joinRoom", { roomId, userName, uid: user?.uid || '' });
     });
 
+    socket.on("matchCanceled", ({ message }) => {
+      console.log(`[Client] Match canceled: ${message}`);
+      toast.info(message, { autoClose: 5000 });
+      navigate('/matchmaking');
+    });
+
+    socket.on('matchResultConfirmed', ({ result, payout }) => {
+        if (result === 'lost') {
+            // We already set gameResult to 'I LOST' when the button was clicked
+            setShowSuccess(true);
+        } else if (result === 'won') {
+            setGameResult('I WON'); // Set this for the success message
+            setShowSuccess(true);
+            toast.success(`You won! ₹${payout.toFixed(2)} has been added to your winning chips.`);
+        }
+    });
+
     return () => {
       socket.off("connect");
       socket.off("roomStateUpdate");
@@ -177,6 +195,8 @@ export function GameRoom() {
       socket.off("error");
       socket.off("disconnect");
       socket.off("reconnect");
+      socket.off("matchCanceled");
+      socket.off("matchResultConfirmed");
     };
   }, [roomId, user, userName]);
 
@@ -307,7 +327,7 @@ export function GameRoom() {
     if (result === 'I WON') {
       // Show upload prompt
     } else if (result === 'I LOST') {
-      setTimeout(() => setShowSuccess(true), 500);
+      setShowLostConfirmationModal(true);
     } else if (result === 'CANCEL') {
       setShowCancelOptions(true);
     }
@@ -315,6 +335,13 @@ export function GameRoom() {
 
   const handleCancelReasonSubmit = async (reason) => {
     if (!user) return;
+
+    if (!generatedRoomCode) {
+      socketRef.current.emit('match:cancel', { roomId });
+      // The server will notify us to redirect via 'matchCanceled'
+      return;
+    }
+
     setUploading(true);
     try {
       await updateDoc(doc(db, 'users', user.uid), {
@@ -368,6 +395,40 @@ export function GameRoom() {
       blocker.reset(); // Reset the navigation attempt
     }
     setNextLocation(null);
+  };
+
+  const handleConfirmLoss = () => {
+    setShowLostConfirmationModal(false);
+    socketRef.current.emit('match:iLost', { roomId });
+  };
+
+  const renderLostConfirmationModal = () => {
+    if (!showLostConfirmationModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Loss</h3>
+          <p className="text-gray-600 mb-6">
+            Are you sure you lost the game? This action cannot be undone.
+          </p>
+          <div className="flex justify-around gap-4">
+            <button
+              onClick={handleConfirmLoss}
+              className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
+            >
+              Yes, I Lost
+            </button>
+            <button
+              onClick={() => setShowLostConfirmationModal(false)}
+              className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-bold hover:bg-gray-500 transition-colors"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderLeaveConfirmationModal = () => {
@@ -503,6 +564,7 @@ export function GameRoom() {
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
       <Header />
       {renderLeaveConfirmationModal()}
+      {renderLostConfirmationModal()}
       <main className="flex-grow w-full flex flex-col items-center py-4 px-1 sm:px-3">
         <div className="w-full max-w-md md:max-w-2xl bg-white rounded-xl shadow-md md:shadow-lg md:my-8 md:px-8 py-6 px-2">
           <div className="flex items-center justify-between w-full p-3 rounded-2xl shadow bg-gradient-to-tr from-blue-100 via-white to-blue-50 mt-0 md:mt-2 gap-3">
