@@ -512,7 +512,14 @@ io.on('connection', (socket) => {
     const match = matches.find(m => (m.playerA.id === socket.id || m.playerB.id === socket.id));
     if (!match) return;
 
+    // IMPORTANT: Do NOT refund if the match is already pending approval or completed.
+    if (match.status === 'pending_approval' || match.status === 'completed') {
+        console.log(`[Server] Player disconnected from match ${match.id}. Status is ${match.status}. No refund.`);
+        return; // Do not refund or cancel if already in a final/pending state.
+    }
+
     if (match.status !== 'active' || match.generatedRoomCode) {
+        console.log(`[Server] Player disconnected from match ${match.id}. Status is ${match.status}, Room Code: ${match.generatedRoomCode}. No refund.`);
         return;
     }
     match.status = 'canceled';

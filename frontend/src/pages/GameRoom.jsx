@@ -150,8 +150,9 @@ export function GameRoom() {
     });
 
     socket.on("error", ({ message }) => {
-      console.log(`[Client] Error: ${message}`);
-      toast.error(message);
+      toast.dismiss('cancelToast');
+      console.error(`[Client] Received 'error' event from server:`, message);
+      toast.error(`Server Error: ${message}`);
     });
 
     socket.on("disconnect", () => {
@@ -335,8 +336,16 @@ export function GameRoom() {
   };
 
   const handleCancelReasonSubmit = (reason) => {
-    if (!user) return;
-    console.log(`[Client] Attempting to cancel match with reason: ${reason}. Emitting 'match:cancel'.`);
+    if (!user) {
+      console.error("[Client] Cannot cancel: User not found.");
+      return;
+    }
+    if (!socketRef.current) {
+      console.error("[Client] Cannot cancel: Socket not connected.");
+      return;
+    }
+    console.log(`[Client] handleCancelReasonSubmit called with reason: "${reason}".`);
+    console.log(`[Client] Emitting 'match:cancel' with roomId: "${roomId}" and reason: "${reason}".`);
     toast.loading("Sending cancellation request...", { toastId: 'cancelToast' });
     socketRef.current.emit('match:cancel', { roomId, reason });
   };
