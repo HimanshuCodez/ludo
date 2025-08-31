@@ -446,26 +446,48 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('match:cancel', async ({ roomId }) => {
+  socket.on('match:cancel', async ({ roomId, reason }) => {
+    console.log(`[Server] Received 'match:cancel' for room ${roomId} from ${socket.id}. Reason: ${reason}`);
     const match = matches.find(m => m.id === roomId);
-    if (!match) return;
 
-    if (match.status !== 'active' || match.generatedRoomCode) {
-        return;
+    if (!match) {
+      console.error(`[Server] 'match:cancel' failed: Match with ID ${roomId} not found.`);
+      return socket.emit('error', { message: 'Match not found.' });
     }
-    match.status = 'canceled';
+    
+    console.log(`[Server] Match found:`, JSON.stringify(match, null, 2));
+    console.log(`[Server] Checking conditions: match.status is '${match.status}', match.generatedRoomCode is '${match.generatedRoomCode}'`);
 
-    console.log(`[Server] Match ${roomId} canceled by ${socket.id}. Refunding.`);
+    if (match.status !== 'active') {
+        console.log(`[Server] 'match:cancel' rejected. Match status is not 'active'. Status: ${match.status}`);
+        return socket.emit('error', { message: `Cannot cancel. Match status is not active (${match.status}).` });
+    }
+
+    if (match.generatedRoomCode) {
+        console.log(`[Server] 'match:cancel' rejected. Room code already generated: ${match.generatedRoomCode}`);
+        return socket.emit('error', { message: `Cannot cancel. Room code already generated.` });
+    }
+    
+    console.log(`[Server] Conditions met. Proceeding with cancellation for match ${roomId}.`);
+    match.status = 'canceled';
+    match.cancelReason = reason;
+
+    console.log(`[Server] Attempting to refund funds for match ${roomId}.`);
     const refundResult = await refundFunds(match.playerA.uid, match.playerB.uid, match.amount);
+    console.log(`[Server] Refund result for match ${roomId}:`, refundResult);
 
     if (refundResult.success) {
+        console.log(`[Server] Refund successful. Saving match ${roomId} and notifying clients.`);
         await saveMatchToFirestore(match);
         await saveMatchesToFile();
         io.to(roomId).emit('matchCanceled', { message: 'Match canceled. Your bet has been refunded.' });
         updateAllQueues();
+        console.log(`[Server] 'matchCanceled' event emitted for room ${roomId}.`);
     } else {
         console.error(`[Server] CRITICAL: Refund failed for canceled match ${roomId}.`);
+        match.status = 'active'; // Revert status
         io.to(roomId).emit('error', { message: `Critical error during refund. Please contact support.` });
+        console.log(`[Server] 'error' event emitted for room ${roomId} due to refund failure.`);
     }
   });
 
