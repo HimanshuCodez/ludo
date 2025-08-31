@@ -53,7 +53,6 @@ export function Matchmaking() {
     fetchUserData();
 
     const socket = io("https://ludo-ic57.onrender.com/", {
-      transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

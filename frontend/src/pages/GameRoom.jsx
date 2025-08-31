@@ -74,7 +74,6 @@ export function GameRoom() {
     fetchUserData();
 
     const socket = io("https://ludo-ic57.onrender.com/", {
-      transports: ["websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
@@ -168,9 +167,11 @@ export function GameRoom() {
     });
 
     socket.on("matchCanceled", ({ message }) => {
+      toast.dismiss('cancelToast');
       console.log(`[Client] Match canceled: ${message}`);
       toast.info(message, { autoClose: 5000 });
-      navigate('/matchmaking');
+      setGameResult('MATCH_CANCELED');
+      setShowSuccess(true);
     });
 
     socket.on('matchResultConfirmed', ({ result, payout }) => {
@@ -335,8 +336,8 @@ export function GameRoom() {
 
   const handleCancelReasonSubmit = (reason) => {
     if (!user) return;
-    // Always emit the cancel event to trigger the refund/redirect flow.
-    // The server already checks if the game has started, so it's safe.
+    console.log("[Client] Attempting to cancel match. Emitting 'match:cancel'.");
+    toast.loading("Sending cancellation request...", { toastId: 'cancelToast' });
     socketRef.current.emit('match:cancel', { roomId });
   };
 
@@ -471,16 +472,22 @@ export function GameRoom() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                {gameResult === 'I WON' ? 'Congratulations! 🎉' : gameResult === 'I LOST' ? 'Better Luck Next Time! 💪' : 'Result Submitted'}
+                {
+                  gameResult === 'I WON' ? 'Congratulations! 🎉' :
+                  gameResult === 'I LOST' ? 'Better Luck Next Time! 💪' :
+                  gameResult === 'MATCH_CANCELED' ? 'Match Cancelled' :
+                  'Result Submitted'
+                }
               </h2>
               <p className="text-gray-600 mb-4">
-                {gameResult === 'I WON'
-                  ? 'Your winning screenshot has been recorded!'
-                  : gameResult === 'I LOST'
-                  ? 'Your result has been recorded. Keep practicing!'
-                  : 'Your cancellation has been recorded.'}
+                {
+                  gameResult === 'I WON' ? 'Your winning screenshot has been recorded!' :
+                  gameResult === 'I LOST' ? 'Your result has been recorded. Keep practicing!' :
+                  gameResult === 'MATCH_CANCELED' ? 'The match was canceled and your bet has been refunded.' :
+                  'Your cancellation has been recorded.'
+                }
               </p>
-            </div><Link to="/home">
+            </div><Link to="/matchmaking">
             <button
               onClick={resetAll}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
